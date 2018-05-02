@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:layout_marginBottom="1dp"
+    android:clipChildren="false">
+
+    <RelativeLayout
+        android:id="@+id/slide_itemView"
+        android:clipChildren="false"
+        android:tag="slide_flag"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <TextView
+            android:id="@+id/item_text"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="#e1e1e1"
+            android:gravity="center"
+            android:text="item"
+            android:textColor="#333333"
+            android:textSize="16sp" />
+
+
+        <LinearLayout
+            android:id="@+id/slide"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@id/item_text"
+            android:clipChildren="false"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/zhiding"
+                android:layout_width="80dp"
+                android:layout_height="match_parent"
+                android:background="#C8C7CD"
+                android:gravity="center"
+                android:text="置顶"
+                android:textColor="#ffffff" />
+
+            <TextView
+                android:id="@+id/yidu"
+                android:layout_width="80dp"
+                android:layout_height="match_parent"
+                android:background="#FF9D00"
+                android:gravity="center"
+                android:text="设为已读"
+                android:textColor="#ffffff" />
+
+            <TextView
+                android:id="@+id/shanchu"
+                android:layout_width="80dp"
+                android:layout_height="match_parent"
+                android:background="#FE3C31"
+                android:gravity="center"
+                android:text="删除"
+                android:textColor="#ffffff" />
+        </LinearLayout>
+
+    </RelativeLayout>
+
+</RelativeLayout>
