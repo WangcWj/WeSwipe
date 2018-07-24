@@ -100,7 +100,8 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
 
         @Override
         public float getActionWidth() {
-            return  slide.getMeasuredWidth();
+            //布局隐藏超过父布局的范围的时候这里得不到宽度
+            return  dip2px(context,240);
         }
 
     }
