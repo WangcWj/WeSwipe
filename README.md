@@ -1,5 +1,5 @@
 # SideslippingDemo
-高仿qq侧滑
+高仿qq侧滑,侧滑删除Item之后会出现Item复用的问题 我建议再执行删除之前先把当前Item的侧滑状态恢复.
 
 ### 效果图   仿qq侧滑</br>
 
