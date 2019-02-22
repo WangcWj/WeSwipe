@@ -596,6 +596,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     /**
+     * 找到需要执行侧滑的那个View,自己设置的.
      * @param viewHolder
      * @return
      */
@@ -802,7 +803,6 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                     @Override
                     public void onAnimationStart(Animator animation) {
                         super.onAnimationStart(animation);
-                        Log.e("WANG", "WItemTouchHelperPlus.onAnimationStart    Recover   ");
                     }
                 };
                 final long duration = mCallback.getAnimationDuration(mRecyclerView, animationType,

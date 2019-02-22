@@ -25,6 +25,11 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     private Context context;
     private List<String> data = new ArrayList<>();
     private LayoutInflater layoutInflater;
+    DelectedItemListener delectedItemListener;
+
+    public void setDelectedItemListener(DelectedItemListener delectedItemListener) {
+        this.delectedItemListener = delectedItemListener;
+    }
 
     public RecAdapter(Context context) {
         this.context = context;
@@ -35,6 +40,17 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
         data.clear();
         data.addAll(list);
         notifyDataSetChanged();
+    }
+
+    public List<String> getData() {
+        return data;
+    }
+
+    public void removeDataByPosition(int position){
+        if(position > 0 && position < data.size()) {
+            data.remove(position);
+            notifyDataSetChanged();
+        }
     }
 
     @Override
@@ -68,7 +84,9 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
         holder.shanchu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context, "删除" +position, Toast.LENGTH_SHORT).show();
+                 if(null != delectedItemListener){
+                     delectedItemListener.delect(position);
+                 }
             }
         });
     }
@@ -116,4 +134,9 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
         float scale = context.getResources().getDisplayMetrics().density;
         return (int) (dpValue * scale + 0.5f);
     }
+
+    public interface DelectedItemListener{
+        void delect(int position);
+    }
+
 }
