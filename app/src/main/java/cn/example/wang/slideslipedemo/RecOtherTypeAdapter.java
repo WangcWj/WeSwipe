@@ -34,8 +34,10 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
         layoutInflater = LayoutInflater.from(context);
     }
 
-    public void setList(List<String> list) {
-        data.clear();
+    public void setList(List<String> list, boolean refresh) {
+        if (refresh) {
+            data.clear();
+        }
         data.addAll(list);
         notifyDataSetChanged();
     }
@@ -44,7 +46,7 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
         if (position >= 0 && position < data.size()) {
             data.remove(position);
             notifyItemRemoved(position);
-            notifyItemRangeChanged(position,data.size()-1);
+            notifyItemRangeChanged(position, data.size() - 1);
         }
     }
 
@@ -56,18 +58,19 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
 
     @Override
     public void onBindViewHolder(final RecViewholder holder, final int position) {
-        holder.textView.setText(String.valueOf(position));
+        String s = data.get(holder.getAdapterPosition());
+        holder.textView.setText(s);
         holder.textView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context, "s  " +position, Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "s  " + holder.getAdapterPosition(), Toast.LENGTH_SHORT).show();
             }
         });
         holder.slide.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(null != deletedItemListener){
-                    deletedItemListener.deleted(position);
+                if (null != deletedItemListener) {
+                    deletedItemListener.deleted(holder.getAdapterPosition());
                 }
             }
         });
@@ -82,7 +85,7 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
     /**
      * view.getWidth()获取的是屏幕中可以看到的大小.
      */
-    public  class RecViewholder extends RecyclerView.ViewHolder implements SlideSwapAction {
+    public class RecViewholder extends RecyclerView.ViewHolder implements SlideSwapAction {
         public TextView textView;
         public TextView slide;
 
@@ -95,7 +98,7 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
 
         @Override
         public float getActionWidth() {
-            return  dip2px(slide.getContext(),100);
+            return dip2px(slide.getContext(), 100);
         }
 
         @Override
@@ -107,6 +110,7 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
 
     /**
      * 根据手机分辨率从DP转成PX
+     *
      * @param context
      * @param dpValue
      * @return

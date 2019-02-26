@@ -26,5 +26,11 @@ public class GuideActivity extends AppCompatActivity {
                 SlideOtherTypeActivity.start(GuideActivity.this);
             }
         });
+        findViewById(R.id.bt3).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SmartRefreshLayoutActivity.start(GuideActivity.this);
+            }
+        });
     }
 }
