@@ -107,8 +107,7 @@ public  class RecViewholder extends RecyclerView.ViewHolder implements SlideSwap
 
 当你使用侧滑删除的时候为了避免各种item错乱或者position错乱的问题，建议您选择这样的删除跟刷新方式，建议采用第一种删除刷新方法：
 
-* 采用notifyItemRemoved(position)+ notifyItemRangeChanged(position,data.size()-1)方法。
-* 采用notifyItemRemoved(position)，position采用holder.getAdapterPosition()。
+* 采用notifyItemRemoved(position)+ notifyItemRangeChanged(position,data.size()-1)方法，position采用holder.getAdapterPosition()。
 
 1.使用notifyDataSetChange()方法的时候会导致侧滑的布局出现复用的问题。
 
