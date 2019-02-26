@@ -41,11 +41,6 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     public final static String SLIDE_ITEM_TYPE_ITEMVIEW = "itemView";
 
     /**
-     * 侧滑显示的布局 隐藏 在滑动布局的下面的标记  看场景选择
-     */
-    public final static String SLIDE_ITEM_TYPE_SLIDECONTAINER = "slideContainer";
-
-    /**
      * Up direction, used for swipe & drag control.
      */
     public static final int UP = 1;
@@ -220,22 +215,6 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     private int mSlop;
 
     RecyclerView mRecyclerView;
-
-    /**
-     * 判断当前侧滑布局的标记
-     * {@link #SLIDE_ITEM_TYPE_ITEMVIEW}
-     */
-    private boolean slideItemTypeIsItemView() {
-        return SLIDE_ITEM_TYPE_ITEMVIEW.equals(mCallback.getItemSlideType());
-    }
-
-    /**
-     * 判断当前侧滑布局的标记
-     * {@link #SLIDE_ITEM_TYPE_SLIDECONTAINER}
-     */
-    private boolean slideItemTypeIsContainerView() {
-        return SLIDE_ITEM_TYPE_SLIDECONTAINER.equals(mCallback.getItemSlideType());
-    }
 
     /**
      * When user drags a view to the edge, we start scrolling the LayoutManager as long as View
@@ -699,8 +678,8 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     private float getSwipeWidth() {
-        if (mSelected instanceof Extension) {
-            return ((Extension) mSelected).getActionWidth();
+        if (mSelected instanceof SlideSwapAction) {
+            return ((SlideSwapAction) mSelected).getActionWidth();
         }
         return mRecyclerView.getWidth();
     }
@@ -1391,8 +1370,9 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 }
             }
             int width = mRecyclerView.getWidth();
-            if (viewHolder instanceof Extension && mCallback.getItemSlideType().equals(SLIDE_ITEM_TYPE_ITEMVIEW)) {
-                Extension extension = (Extension) viewHolder;
+            //如果侧滑的布局是跟在ItemView后面的话,那么该布局的宽度就比 mRecyclerView.getWidth() 要长了.
+            if (viewHolder instanceof SlideSwapAction && SLIDE_ITEM_TYPE_ITEMVIEW.equals(mCallback.getItemSlideType())) {
+                SlideSwapAction extension = (SlideSwapAction) viewHolder;
                 width += (int) extension.getActionWidth();
             }
             final float threshold = width * mCallback

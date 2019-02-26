@@ -13,7 +13,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.example.wang.slideslipedemo.slideswaphelper.Extension;
+import cn.example.wang.slideslipedemo.slideswaphelper.SlideSwapAction;
 
 /**
  * Created by WANG on 18/4/24.
@@ -25,10 +25,10 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     private Context context;
     private List<String> data = new ArrayList<>();
     private LayoutInflater layoutInflater;
-    DelectedItemListener delectedItemListener;
+    DeletedItemListener delectedItemListener;
 
-    public void setDelectedItemListener(DelectedItemListener delectedItemListener) {
-        this.delectedItemListener = delectedItemListener;
+    public void setDelectedItemListener(DeletedItemListener deletedItemListener) {
+        this.delectedItemListener = deletedItemListener;
     }
 
     public RecAdapter(Context context) {
@@ -39,17 +39,17 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     public void setList(List<String> list) {
         data.clear();
         data.addAll(list);
-        notifyDataSetChanged();
+        notifyItemMoved(0, data.size() - 1);
     }
 
     public List<String> getData() {
         return data;
     }
 
-    public void removeDataByPosition(int position){
-        if(position > 0 && position < data.size()) {
+    public void removeDataByPosition(int position) {
+        if (position >= 0 && position < data.size()) {
             data.remove(position);
-            notifyDataSetChanged();
+            notifyItemRemoved(position);
         }
     }
 
@@ -60,33 +60,33 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     }
 
     @Override
-    public void onBindViewHolder(RecViewholder holder, final int position) {
-        holder.textView.setText(data.get(position));
+    public void onBindViewHolder(final RecViewholder holder, int position) {
+        holder.textView.setText(data.get(holder.getAdapterPosition()));
         holder.textView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context, "s  " +position, Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "s  " + holder.getAdapterPosition(), Toast.LENGTH_SHORT).show();
             }
         });
 
         holder.zhiding.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context, "置顶" +position, Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "置顶" + holder.getAdapterPosition(), Toast.LENGTH_SHORT).show();
             }
         });
         holder.yidu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context, "已读" +position, Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "已读" + holder.getAdapterPosition(), Toast.LENGTH_SHORT).show();
             }
         });
         holder.shanchu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                 if(null != delectedItemListener){
-                     delectedItemListener.delect(position);
-                 }
+                if (null != delectedItemListener) {
+                    delectedItemListener.deleted(holder.getAdapterPosition());
+                }
             }
         });
     }
@@ -100,10 +100,10 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     /**
      * view.getWidth()获取的是屏幕中可以看到的大小.
      */
-    public  class RecViewholder extends RecyclerView.ViewHolder implements Extension {
+    public class RecViewholder extends RecyclerView.ViewHolder implements SlideSwapAction {
         public TextView textView;
         public LinearLayout slide;
-        public TextView zhiding,yidu,shanchu;
+        public TextView zhiding, yidu, shanchu;
         public RelativeLayout slideItem;
 
         public RecViewholder(View itemView) {
@@ -119,13 +119,19 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
         @Override
         public float getActionWidth() {
             //布局隐藏超过父布局的范围的时候这里得不到宽度
-            return  dip2px(context,240);
+            return dip2px(context, 240);
+        }
+
+        @Override
+        public View ItemView() {
+            return slideItem;
         }
 
     }
 
     /**
      * 根据手机分辨率从DP转成PX
+     *
      * @param context
      * @param dpValue
      * @return
@@ -135,8 +141,9 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
         return (int) (dpValue * scale + 0.5f);
     }
 
-    public interface DelectedItemListener{
-        void delect(int position);
+    public interface DeletedItemListener {
+
+        void deleted(int position);
     }
 
 }

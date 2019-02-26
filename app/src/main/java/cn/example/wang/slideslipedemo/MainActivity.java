@@ -17,7 +17,12 @@ import java.util.List;
 import cn.example.wang.slideslipedemo.slideswaphelper.PlusItemSlideCallback;
 import cn.example.wang.slideslipedemo.slideswaphelper.WItemTouchHelperPlus;
 
-public class MainActivity extends AppCompatActivity implements RecAdapter.DelectedItemListener{
+/**
+ *
+ *
+ *
+ */
+public class MainActivity extends AppCompatActivity implements RecAdapter.DeletedItemListener{
     RecyclerView recyclerView;
     private RecAdapter recAdapter;
 
@@ -46,19 +51,21 @@ public class MainActivity extends AppCompatActivity implements RecAdapter.Delect
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recAdapter = new RecAdapter(this);
+        recAdapter.setDelectedItemListener(this);
         recyclerView.setAdapter(recAdapter);
         /*ItemTouchHelperCallback touchHelperCallback = new ItemTouchHelperCallback();
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(touchHelperCallback);
         itemTouchHelper.attachToRecyclerView(recyclerView);*/
 
         //作为一个ItemDecoration 写入的
-        PlusItemSlideCallback callback = new PlusItemSlideCallback(WItemTouchHelperPlus.SLIDE_ITEM_TYPE_ITEMVIEW);
+        PlusItemSlideCallback callback = new PlusItemSlideCallback();
+        callback.setType(WItemTouchHelperPlus.SLIDE_ITEM_TYPE_ITEMVIEW);
         WItemTouchHelperPlus extension = new WItemTouchHelperPlus(callback);
         extension.attachToRecyclerView(recyclerView);
     }
 
     @Override
-    public void delect(int position) {
+    public void deleted(int position) {
         recAdapter.removeDataByPosition(position);
     }
 }

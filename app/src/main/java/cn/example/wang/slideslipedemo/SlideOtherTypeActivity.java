@@ -13,7 +13,7 @@ import java.util.List;
 import cn.example.wang.slideslipedemo.slideswaphelper.PlusItemSlideCallback;
 import cn.example.wang.slideslipedemo.slideswaphelper.WItemTouchHelperPlus;
 
-public class SlideOtherTypeActivity extends AppCompatActivity {
+public class SlideOtherTypeActivity extends AppCompatActivity implements RecAdapter.DeletedItemListener{
     RecyclerView recyclerView;
     private RecOtherTypeAdapter recAdapter;
 
@@ -31,7 +31,7 @@ public class SlideOtherTypeActivity extends AppCompatActivity {
 
     private void initData() {
         List<String> list = new ArrayList<>();
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 7; i++) {
             list.add("Item  " +i);
         }
         recAdapter.setList(list);
@@ -41,10 +41,16 @@ public class SlideOtherTypeActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerViewTwo);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recAdapter = new RecOtherTypeAdapter(this);
+        recAdapter.setDeletedItemListener(this);
         recyclerView.setAdapter(recAdapter);
 
-        PlusItemSlideCallback callback = new PlusItemSlideCallback(WItemTouchHelperPlus.SLIDE_ITEM_TYPE_SLIDECONTAINER);
+        PlusItemSlideCallback callback = new PlusItemSlideCallback();
         WItemTouchHelperPlus extension = new WItemTouchHelperPlus(callback);
         extension.attachToRecyclerView(recyclerView);
+    }
+
+    @Override
+    public void deleted(int position) {
+        recAdapter.removeDataByPosition(position);
     }
 }
