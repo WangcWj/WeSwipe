@@ -103,7 +103,7 @@ public  class RecViewholder extends RecyclerView.ViewHolder implements SlideSwap
  extension.attachToRecyclerView(recyclerView);
 ```
 
-####注意：
+#### 注意：
 
 当你使用侧滑删除的时候为了避免各种item错乱或者position错乱的问题，建议您选择这样的删除跟刷新方式，建议采用第一种删除刷新方法：
 
