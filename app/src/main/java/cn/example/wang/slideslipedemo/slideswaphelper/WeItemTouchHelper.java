@@ -30,15 +30,36 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by WANG on 2018/4/27.
+ * This is a utility class to add swipe to dismiss and drag & drop support to RecyclerView.
+ * <p>
+ * It works with a RecyclerView and a Callback class, which configures what type of interactions
+ * are enabled and also receives events when user performs these actions.
+ * <p>
+ * Depending on which functionality you support, you should override
+ * {@link ItemTouchHelper.Callback#onMove(RecyclerView, ViewHolder, ViewHolder)} and / or
+ * {@link ItemTouchHelper.Callback#onSwiped(ViewHolder, int)}.
+ * <p>
+ * This class is designed to work with any LayoutManager but for certain situations, it can be
+ * optimized for your custom LayoutManager by extending methods in the
+ * {@link ItemTouchHelper.Callback} class or implementing {@link ItemTouchHelper.ViewDropHandler}
+ * interface in your LayoutManager.
+ * <p>
+ * By default, ItemTouchHelper moves the items' translateX/Y properties to reposition them. You can
+ * customize these behaviors by overriding {@link ItemTouchHelper.Callback#onChildDraw(Canvas, RecyclerView,
+ * ViewHolder, float, float, int, boolean)}
+ * or {@link ItemTouchHelper.Callback#onChildDrawOver(Canvas, RecyclerView, ViewHolder, float, float, int,
+ * boolean)}.
+ * <p/>
+ * Most of the time you only need to override <code>onChildDraw</code>.
  */
-
-public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
+public class WeItemTouchHelper extends RecyclerView.ItemDecoration
         implements RecyclerView.OnChildAttachStateChangeListener {
     /**
-     * 侧滑显示的布局 跟随 在滑动布局的下面的标记  看场景选择
+     * Sliding type.
      */
-    public final static String SLIDE_ITEM_TYPE_ITEMVIEW = "itemView";
+    public static final int SWIPE_ITEM_TYPE_DEFAULT = 0x2;
+
+    public static final int SWIPE_ITEM_TYPE_FLOWWING = 0x2 << 1;
 
     /**
      * Up direction, used for swipe & drag control.
@@ -75,7 +96,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     public static final int END = RIGHT << 2;
 
     /**
-     * WItemTouchHelperPlus is in idle state. At this state, either there is no related motion event by
+     * WeItemTouchHelper is in idle state. At this state, either there is no related motion event by
      * the user or latest motion events have not yet triggered a swipe or drag.
      */
     public static final int ACTION_STATE_IDLE = 0;
@@ -106,7 +127,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      */
     public static final int ANIMATION_TYPE_DRAG = 1 << 3;
 
-    static final String TAG = "WItemTouchHelperPlus";
+    static final String TAG = "WeItemTouchHelper";
 
     static final boolean DEBUG = false;
 
@@ -143,11 +164,6 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     RecyclerView.ViewHolder mSelected = null;
 
     /**
-     * Previous selected view holder
-     */
-    RecyclerView.ViewHolder mPreOpened = null;
-
-    /**
      * The reference coordinates for the action start. For drag & drop, this is the time long
      * press is completed vs for swipe, this is the initial touch point.
      */
@@ -156,12 +172,12 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     float mInitialTouchY;
 
     /**
-     * Set when WItemTouchHelperPlus is assigned to a RecyclerView.
+     * Set when WeItemTouchHelper is assigned to a RecyclerView.
      */
     float mSwipeEscapeVelocity;
 
     /**
-     * Set when WItemTouchHelperPlus is assigned to a RecyclerView.
+     * Set when WeItemTouchHelper is assigned to a RecyclerView.
      */
     float mMaxSwipeVelocity;
 
@@ -187,9 +203,9 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     int mActivePointerId = ACTIVE_POINTER_ID_NONE;
 
     /**
-     * Developer callback which controls the behavior of WItemTouchHelperPlus.
+     * Developer callback which controls the behavior of WeItemTouchHelper.
      */
-    WItemTouchHelperPlus.Callback mCallback;
+    WeItemTouchHelper.Callback mCallback;
 
     /**
      * Current mode.
@@ -198,7 +214,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
 
     /**
      * The direction flags obtained from unmasking
-     * {@link WItemTouchHelperPlus.Callback#getAbsoluteMovementFlags(RecyclerView, RecyclerView.ViewHolder)} for the current
+     * {@link WeItemTouchHelper.Callback#getAbsoluteMovementFlags(RecyclerView, RecyclerView.ViewHolder)} for the current
      * action state.
      */
     int mSelectedFlags;
@@ -210,7 +226,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      * Using framework animators has the side effect of clashing with ItemAnimator, creating
      * jumpy UIs.
      */
-    List<WItemTouchHelperPlus.RecoverAnimation> mRecoverAnimations = new ArrayList<>();
+    List<WeItemTouchHelper.RecoverAnimation> mRecoverAnimations = new ArrayList<>();
 
     private int mSlop;
 
@@ -278,9 +294,21 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      */
     private boolean mClick;
 
+    /**
+     * Previous selected view holder
+     */
+    RecyclerView.ViewHolder mPreOpened = null;
+
     float mLastX = 0;
 
 
+    private boolean swipeTypeIsFollowing(int type){
+        return ((type & SWIPE_ITEM_TYPE_FLOWWING) !=0);
+    }
+
+    /**
+     * 使用功能的RecyclerView，将拦截一些事件。想让ItemView接收到事件的话，
+     */
     private final RecyclerView.OnItemTouchListener mOnItemTouchListener = new RecyclerView.OnItemTouchListener() {
         @Override
         public boolean onInterceptTouchEvent(RecyclerView recyclerView, MotionEvent event) {
@@ -296,23 +324,29 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 mInitialTouchX = event.getX();
                 mInitialTouchY = event.getY();
                 obtainVelocityTracker();
+                //mSelected!=null 表示目前已经有一个ItemView是侧滑动画展开的状态。
                 if (mSelected == null) {
-                    final WItemTouchHelperPlus.RecoverAnimation animation = findAnimation(event);
+                    //通过event查找View，会先从mRecoverAnimations中查找，没有的话需要通过RecyclerView去查找。
+                    final WeItemTouchHelper.RecoverAnimation animation = findAnimation(event);
                     if (animation != null) {
                         //这里是当item侧滑已经展开的时候.如果animation不为null 说明Item的侧滑是展开的状态  需要进行关闭
                         mInitialTouchX -= animation.mX;
                         mInitialTouchY -= animation.mY;
+                        //如果恢复侧滑动画不为null，则从mRecoverAnimations列表中删除掉该动画。
                         endRecoverAnimation(animation.mViewHolder, true);
+                        //mPendingCleanup里面保存了经历过侧滑的View。在View与REC分离的时候，要清理这些View。
+                        //之后调用Callback的clearView方法。
                         if (mPendingCleanup.remove(animation.mViewHolder.itemView)) {
                             mCallback.clearView(mRecyclerView, animation.mViewHolder);
                         }
+                        //mActionState表示Item是拖拽还是侧滑。
                         select(animation.mViewHolder, animation.mActionState);
                         updateDxDy(event, mSelectedFlags, 0);
                     } else {
+                        //如果当前有未恢复侧滑的View，就要关闭侧滑。
                         if (null != mPreOpened) {
                             closePreItem = true;
                             closeOpenedPreItem(mPreOpened);
-                            return true;
                         }
                     }
                 }
@@ -326,13 +360,11 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 mActivePointerId = ACTIVE_POINTER_ID_NONE;
                 select(null, ACTION_STATE_IDLE);
             } else if (mActivePointerId != ACTIVE_POINTER_ID_NONE && !closePreItem) {
-                // in a non scroll orientation, if distance change is above threshold, we
-                // can select the item
+                //查看是否要进行滚动。
+                //通过Pointer的id，查看当前的事件类型，0 是DOWN事件。
                 final int index = event.findPointerIndex(mActivePointerId);
-                if (DEBUG) {
-                    Log.d(TAG, "pointer index " + index);
-                }
                 if (index >= 0) {
+                    Log.e("WANG", "WeItemTouchHelper.onTouchEvent11111");
                     checkSelectForSwipe(action, event, index);
                 }
             }
@@ -340,63 +372,6 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 mVelocityTracker.addMovement(event);
             }
             return mSelected != null;
-        }
-
-        /**
-         * 判断当前点击的位置是否为view并且该View实现了OnClickListener事件
-         * @param x
-         * @param y
-         */
-        private void doChildClickEvent(float x, float y) {
-            if (mSelected == null) return;
-            View consumeEventView = mSelected.itemView;
-            if (consumeEventView instanceof ViewGroup) {
-                consumeEventView = findConsumeView((ViewGroup) consumeEventView, x, y);
-            }
-            if (consumeEventView != null) {
-                consumeEventView.performClick();
-            }
-        }
-
-        /**
-         * 查找view
-         * @param parent 父容器
-         * @param x  点击事件的x坐标
-         * @param y  点击事件的y坐标
-         * @return
-         */
-        private View findConsumeView(ViewGroup parent, float x, float y) {
-            for (int i = 0; i < parent.getChildCount(); i++) {
-                View child = parent.getChildAt(i);
-                if (child instanceof ViewGroup && child.getVisibility() == View.VISIBLE) {
-                    View view = findConsumeView((ViewGroup) child, x, y);
-                    if (view != null) {
-                        return view;
-                    }
-                } else {
-                    if (isInBoundsClickable((int) x, (int) y, child)) return child;
-                }
-            }
-            if (isInBoundsClickable((int) x, (int) y, parent)) return parent;
-            return null;
-        }
-
-        /**
-         * 边界判断
-         * @param x
-         * @param y
-         * @param child 再点击事件下找到的view
-         * @return
-         */
-        private boolean isInBoundsClickable(int x, int y, View child) {
-            int[] location = new int[2];
-            child.getLocationOnScreen(location);
-            Rect rect = new Rect(location[0], location[1], location[0] + child.getWidth(), location[1] + child.getHeight());
-            if (rect.contains(x, y) && ViewCompat.hasOnClickListeners(child)
-                    && child.getVisibility() == View.VISIBLE) {
-                return true;
-            }
-            return false;
         }
 
         @Override
@@ -411,6 +386,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
             final int action = event.getActionMasked();
             final int activePointerIndex = event.findPointerIndex(mActivePointerId);
             if (activePointerIndex >= 0) {
+                Log.e("WANG", "WeItemTouchHelper.onTouchEvent222222");
                 checkSelectForSwipe(action, event, activePointerIndex);
             }
             RecyclerView.ViewHolder viewHolder = mSelected;
@@ -421,7 +397,10 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 case MotionEvent.ACTION_MOVE: {
                     // Find the index of the active pointer and fetch its position
                     if (activePointerIndex >= 0) {
-                        if (Math.abs(event.getX() - mLastX) > mSlop) mClick = false;
+                        if (Math.abs(event.getX() - mLastX) > mSlop) {
+                            //为了往下分发点击事件
+                            mClick = false;
+                        }
                         mLastX = event.getX();
                         updateDxDy(event, mSelectedFlags, activePointerIndex);
                         moveIfNecessary(viewHolder);
@@ -485,15 +464,15 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     private long mDragScrollStartTimeInMs;
 
     /**
-     * Creates an WItemTouchHelperPlus that will work with the given Callback.
+     * Creates an WeItemTouchHelper that will work with the given Callback.
      * <p>
-     * You can attach WItemTouchHelperPlus to a RecyclerView via
+     * You can attach WeItemTouchHelper to a RecyclerView via
      * {@link #attachToRecyclerView(RecyclerView)}. Upon attaching, it will add an item decoration,
      * an onItemTouchListener and a Child attach / detach listener to the RecyclerView.
      *
      * @param callback The Callback which controls the behavior of this touch helper.
      */
-    public WItemTouchHelperPlus(WItemTouchHelperPlus.Callback callback) {
+    public WeItemTouchHelper(WeItemTouchHelper.Callback callback) {
         mCallback = callback;
     }
 
@@ -505,12 +484,12 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     /**
-     * Attaches the WItemTouchHelperPlus to the provided RecyclerView. If TouchHelper is already
+     * Attaches the WeItemTouchHelper to the provided RecyclerView. If TouchHelper is already
      * attached to a RecyclerView, it will first detach from the previous one. You can call this
      * method with {@code null} to detach it from the current RecyclerView.
      *
      * @param recyclerView The RecyclerView instance to which you want to add this helper or
-     *                     {@code null} if you want to remove WItemTouchHelperPlus from the current
+     *                     {@code null} if you want to remove WeItemTouchHelper from the current
      *                     RecyclerView.
      */
     public void attachToRecyclerView(@Nullable RecyclerView recyclerView) {
@@ -538,6 +517,71 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 }
             });
         }
+    }
+
+
+    /**
+     * 判断当前点击的位置是否为view并且该View实现了OnClickListener事件
+     *
+     * @param x
+     * @param y
+     */
+    private void doChildClickEvent(float x, float y) {
+        if (mSelected == null) return;
+        View consumeEventView = mSelected.itemView;
+        if (consumeEventView instanceof ViewGroup) {
+            consumeEventView = findConsumeView((ViewGroup) consumeEventView, x, y);
+        }
+        if (consumeEventView != null) {
+            consumeEventView.performClick();
+        }
+    }
+
+    /**
+     * 查找view
+     *
+     * @param parent 父容器
+     * @param x      点击事件的x坐标
+     * @param y      点击事件的y坐标
+     * @return
+     */
+    private View findConsumeView(ViewGroup parent, float x, float y) {
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+            if (child instanceof ViewGroup && child.getVisibility() == View.VISIBLE) {
+                View view = findConsumeView((ViewGroup) child, x, y);
+                if (view != null) {
+                    return view;
+                }
+            } else {
+                if (isInBoundsClickable((int) x, (int) y, child)) {
+                    return child;
+                }
+            }
+        }
+        if (isInBoundsClickable((int) x, (int) y, parent)) {
+            return parent;
+        }
+        return null;
+    }
+
+    /**
+     * 边界判断
+     *
+     * @param x
+     * @param y
+     * @param child 再点击事件下找到的view
+     * @return
+     */
+    private boolean isInBoundsClickable(int x, int y, View child) {
+        int[] location = new int[2];
+        child.getLocationOnScreen(location);
+        Rect rect = new Rect(location[0], location[1], location[0] + child.getWidth(), location[1] + child.getHeight());
+        if (rect.contains(x, y) && ViewCompat.hasOnClickListeners(child)
+                && child.getVisibility() == View.VISIBLE) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -576,6 +620,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
 
     /**
      * 找到需要执行侧滑的那个View,自己设置的.
+     *
      * @param viewHolder
      * @return
      */
@@ -621,7 +666,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         // clean all attached
         final int recoverAnimSize = mRecoverAnimations.size();
         for (int i = recoverAnimSize - 1; i >= 0; i--) {
-            final WItemTouchHelperPlus.RecoverAnimation recoverAnimation = mRecoverAnimations.get(0);
+            final WeItemTouchHelper.RecoverAnimation recoverAnimation = mRecoverAnimations.get(0);
             mCallback.clearView(mRecyclerView, recoverAnimation.mViewHolder);
         }
         mRecoverAnimations.clear();
@@ -635,7 +680,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
             return;
         }
         mGestureDetector = new GestureDetectorCompat(mRecyclerView.getContext(),
-                new WItemTouchHelperPlus.WItemTouchHelperPlusGestureListener());
+                new WeItemTouchHelper.WItemTouchHelperPlusGestureListener());
     }
 
     private void getSelectedDxDy(float[] outPosition) {
@@ -748,7 +793,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 getSelectedDxDy(mTmpPosition);
                 final float currentTranslateX = mTmpPosition[0];
                 final float currentTranslateY = mTmpPosition[1];
-                final WItemTouchHelperPlus.RecoverAnimation rv = new WItemTouchHelperPlus.RecoverAnimation(prevSelected, animationType,
+                final WeItemTouchHelper.RecoverAnimation rv = new WeItemTouchHelper.RecoverAnimation(prevSelected, animationType,
                         prevActionState, currentTranslateX, currentTranslateY,
                         targetTranslateX, targetTranslateY) {
                     @Override
@@ -819,7 +864,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         mRecyclerView.invalidate();
     }
 
-    void postDispatchSwipe(final WItemTouchHelperPlus.RecoverAnimation anim, final int swipeDir) {
+    void postDispatchSwipe(final WeItemTouchHelper.RecoverAnimation anim, final int swipeDir) {
         // wait until animations are complete.
         mRecyclerView.post(new Runnable() {
             @Override
@@ -1033,7 +1078,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     int endRecoverAnimation(RecyclerView.ViewHolder viewHolder, boolean override) {
         final int recoverAnimSize = mRecoverAnimations.size();
         for (int i = recoverAnimSize - 1; i >= 0; i--) {
-            final WItemTouchHelperPlus.RecoverAnimation anim = mRecoverAnimations.get(i);
+            final WeItemTouchHelper.RecoverAnimation anim = mRecoverAnimations.get(i);
             if (anim.mViewHolder == viewHolder) {
                 anim.mOverridden |= override;
                 if (!anim.mEnded) {
@@ -1165,7 +1210,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
             }
         }
         for (int i = mRecoverAnimations.size() - 1; i >= 0; i--) {
-            final WItemTouchHelperPlus.RecoverAnimation anim = mRecoverAnimations.get(i);
+            final WeItemTouchHelper.RecoverAnimation anim = mRecoverAnimations.get(i);
             final View view = anim.mViewHolder.itemView;
             boolean hitTest = hitTest(view, x, y, anim.mX, anim.mY, anim.mViewHolder);
             if (hitTest) {
@@ -1177,17 +1222,17 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     /**
-     * Starts dragging the provided ViewHolder. By default, WItemTouchHelperPlus starts a drag when a
+     * Starts dragging the provided ViewHolder. By default, WeItemTouchHelper starts a drag when a
      * View is long pressed. You can disable that behavior by overriding
-     * {@link WItemTouchHelperPlus.Callback#isLongPressDragEnabled()}.
+     * {@link WeItemTouchHelper.Callback#isLongPressDragEnabled()}.
      * <p>
      * For this method to work:
      * <ul>
      * <li>The provided ViewHolder must be a child of the RecyclerView to which this
-     * WItemTouchHelperPlus
+     * WeItemTouchHelper
      * is attached.</li>
-     * <li>{@link WItemTouchHelperPlus.Callback} must have dragging enabled.</li>
-     * <li>There must be a previous touch event that was reported to the WItemTouchHelperPlus
+     * <li>{@link WeItemTouchHelper.Callback} must have dragging enabled.</li>
+     * <li>There must be a previous touch event that was reported to the WeItemTouchHelper
      * through RecyclerView's ItemTouchListener mechanism. As long as no other ItemTouchListener
      * grabs previous events, this should work as expected.</li>
      * </ul>
@@ -1208,7 +1253,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      *
      * @param viewHolder The ViewHolder to start dragging. It must be a direct child of
      *                   RecyclerView.
-     * @see WItemTouchHelperPlus.Callback#isItemViewSwipeEnabled()
+     * @see WeItemTouchHelper.Callback#isItemViewSwipeEnabled()
      */
     public void startDrag(RecyclerView.ViewHolder viewHolder) {
         if (!mCallback.hasDragFlag(mRecyclerView, viewHolder)) {
@@ -1217,7 +1262,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
         if (viewHolder.itemView.getParent() != mRecyclerView) {
             Log.e(TAG, "Start drag has been called with a view holder which is not a child of "
-                    + "the RecyclerView which is controlled by this WItemTouchHelperPlus.");
+                    + "the RecyclerView which is controlled by this WeItemTouchHelper.");
             return;
         }
         obtainVelocityTracker();
@@ -1226,17 +1271,17 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     /**
-     * Starts swiping the provided ViewHolder. By default, WItemTouchHelperPlus starts swiping a View
+     * Starts swiping the provided ViewHolder. By default, WeItemTouchHelper starts swiping a View
      * when user swipes their finger (or mouse pointer) over the View. You can disable this
      * behavior
-     * by overriding {@link WItemTouchHelperPlus.Callback}
+     * by overriding {@link WeItemTouchHelper.Callback}
      * <p>
      * For this method to work:
      * <ul>
      * <li>The provided ViewHolder must be a child of the RecyclerView to which this
-     * WItemTouchHelperPlus is attached.</li>
-     * <li>{@link WItemTouchHelperPlus.Callback} must have swiping enabled.</li>
-     * <li>There must be a previous touch event that was reported to the WItemTouchHelperPlus
+     * WeItemTouchHelper is attached.</li>
+     * <li>{@link WeItemTouchHelper.Callback} must have swiping enabled.</li>
+     * <li>There must be a previous touch event that was reported to the WeItemTouchHelper
      * through RecyclerView's ItemTouchListener mechanism. As long as no other ItemTouchListener
      * grabs previous events, this should work as expected.</li>
      * </ul>
@@ -1264,7 +1309,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
         if (viewHolder.itemView.getParent() != mRecyclerView) {
             Log.e(TAG, "Start swipe has been called with a view holder which is not a child of "
-                    + "the RecyclerView controlled by this WItemTouchHelperPlus.");
+                    + "the RecyclerView controlled by this WeItemTouchHelper.");
             return;
         }
         obtainVelocityTracker();
@@ -1272,13 +1317,13 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         select(viewHolder, ACTION_STATE_SWIPE);
     }
 
-    WItemTouchHelperPlus.RecoverAnimation findAnimation(MotionEvent event) {
+    WeItemTouchHelper.RecoverAnimation findAnimation(MotionEvent event) {
         if (mRecoverAnimations.isEmpty()) {
             return null;
         }
         View target = findChildView(event);
         for (int i = mRecoverAnimations.size() - 1; i >= 0; i--) {
-            final WItemTouchHelperPlus.RecoverAnimation anim = mRecoverAnimations.get(i);
+            final WeItemTouchHelper.RecoverAnimation anim = mRecoverAnimations.get(i);
             if (anim.mViewHolder.itemView == target) {
                 return anim;
             }
@@ -1323,12 +1368,13 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         final int originalFlags = (originalMovementFlags
                 & ACTION_MODE_SWIPE_MASK) >> (ACTION_STATE_SWIPE * DIRECTION_FLAG_COUNT);
         int swipeDir;
+        //start slipping.
         if (Math.abs(mDx) > Math.abs(mDy)) {
             if ((swipeDir = checkHorizontalSwipe(viewHolder, flags)) > 0) {
                 // if swipe dir is not in original flags, it should be the relative direction
                 if ((originalFlags & swipeDir) == 0) {
                     // convert to relative
-                    return WItemTouchHelperPlus.Callback.convertToRelativeDirection(swipeDir,
+                    return WeItemTouchHelper.Callback.convertToRelativeDirection(swipeDir,
                             ViewCompat.getLayoutDirection(mRecyclerView));
                 }
                 return swipeDir;
@@ -1344,7 +1390,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 // if swipe dir is not in original flags, it should be the relative direction
                 if ((originalFlags & swipeDir) == 0) {
                     // convert to relative
-                    return WItemTouchHelperPlus.Callback.convertToRelativeDirection(swipeDir,
+                    return WeItemTouchHelper.Callback.convertToRelativeDirection(swipeDir,
                             ViewCompat.getLayoutDirection(mRecyclerView));
                 }
                 return swipeDir;
@@ -1370,14 +1416,14 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                 }
             }
             int width = mRecyclerView.getWidth();
-            //如果侧滑的布局是跟在ItemView后面的话,那么该布局的宽度就比 mRecyclerView.getWidth() 要长了.
-            if (viewHolder instanceof SlideSwapAction && SLIDE_ITEM_TYPE_ITEMVIEW.equals(mCallback.getItemSlideType())) {
+            //If the target layout follows the item view, the RecyclerView is wider than itself.
+            int itemSlideType = mCallback.getItemSlideType();
+            if (viewHolder instanceof SlideSwapAction && swipeTypeIsFollowing(itemSlideType)) {
                 SlideSwapAction extension = (SlideSwapAction) viewHolder;
                 width += (int) extension.getActionWidth();
             }
             final float threshold = width * mCallback
                     .getSwipeThreshold(viewHolder);
-
             if ((flags & dirFlag) != 0 && Math.abs(mDx) > threshold) {
                 return dirFlag;
             }
@@ -1448,13 +1494,33 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     /**
+     * Two types of sliding are provided,{@link SWIPE_ITEM_TYPE_DEFAULT}
+     */
+    public interface SlidingLayoutTypeCallBack {
+
+        /**
+         * The distance ItemView needs to slide.
+         *
+         * @return Distance to Slide.
+         */
+        float getActionWidth();
+
+        /**
+         * View that needs to slide in RecyclerView.
+         *
+         * @return ItemView need to Slide.
+         */
+        View ItemView();
+    }
+
+    /**
      * An interface which can be implemented by LayoutManager for better integration with
-     * {@link WItemTouchHelperPlus}.
+     * {@link WeItemTouchHelper}.
      */
     public interface ViewDropHandler {
 
         /**
-         * Called by the {@link WItemTouchHelperPlus} after a View is dropped over another View.
+         * Called by the {@link WeItemTouchHelper} after a View is dropped over another View.
          * <p>
          * A LayoutManager should implement this interface to get ready for the upcoming move
          * operation.
@@ -1476,7 +1542,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
     }
 
     /**
-     * This class is the contract between WItemTouchHelperPlus and your application. It lets you control
+     * This class is the contract between WeItemTouchHelper and your application. It lets you control
      * which touch behaviors are enabled per each ViewHolder and also receive callbacks when user
      * performs these actions.
      * <p>
@@ -1485,10 +1551,10 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      * of direction flags. ({@link #LEFT}, {@link #RIGHT}, {@link #START}, {@link #END},
      * {@link #UP}, {@link #DOWN}). You can use
      * {@link #makeMovementFlags(int, int)} to easily construct it. Alternatively, you can use
-     * {@link WItemTouchHelperPlus.SimpleCallback}.
+     * {@link WeItemTouchHelper.SimpleCallback}.
      * <p>
-     * If user drags an item, WItemTouchHelperPlus will call
-     * {@link WItemTouchHelperPlus.Callback#onMove(RecyclerView, RecyclerView.ViewHolder, RecyclerView.ViewHolder)
+     * If user drags an item, WeItemTouchHelper will call
+     * {@link WeItemTouchHelper.Callback#onMove(RecyclerView, RecyclerView.ViewHolder, RecyclerView.ViewHolder)
      * onMove(recyclerView, dragged, target)}.
      * Upon receiving this callback, you should move the item from the old position
      * ({@code dragged.getAdapterPosition()}) to new position ({@code target.getAdapterPosition()})
@@ -1501,7 +1567,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      * {@link #chooseDropTarget(RecyclerView.ViewHolder, java.util.List, int, int)} to select a
      * custom drop target.
      * <p>
-     * When a View is swiped, WItemTouchHelperPlus animates it until it goes out of bounds, then calls
+     * When a View is swiped, WeItemTouchHelper animates it until it goes out of bounds, then calls
      * {@link #onSwiped(RecyclerView.ViewHolder, int)}. At this point, you should update your
      * adapter (e.g. remove the item) and call related Adapter#notify event.
      */
@@ -1553,12 +1619,12 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Returns the {@link ItemTouchUIUtil} that is used by the {@link WItemTouchHelperPlus.Callback} class for
+         * Returns the {@link ItemTouchUIUtil} that is used by the {@link WeItemTouchHelper.Callback} class for
          * visual
          * changes on Views in response to user interactions. {@link ItemTouchUIUtil} has different
          * implementations for different platform versions.
          * <p>
-         * By default, {@link WItemTouchHelperPlus.Callback} applies these changes on
+         * By default, {@link WeItemTouchHelper.Callback} applies these changes on
          * {@link RecyclerView.ViewHolder#itemView}.
          * <p>
          * For example, if you have a use case where you only want the text to move when user
@@ -1590,7 +1656,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          *     }
          * </pre>
          *
-         * @return The {@link ItemTouchUIUtil} instance that is used by the {@link WItemTouchHelperPlus.Callback}
+         * @return The {@link ItemTouchUIUtil} instance that is used by the {@link WeItemTouchHelper.Callback}
          */
         public static ItemTouchUIUtil getDefaultUIUtil() {
             return sUICallback;
@@ -1657,8 +1723,6 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
             return directions << (actionState * DIRECTION_FLAG_COUNT);
         }
 
-        abstract int getSlideViewWidth();
-
         /**
          * Should return a composite flag which defines the enabled move directions in each state
          * (idle, swiping, dragging).
@@ -1670,7 +1734,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * This flag is composed of 3 sets of 8 bits, where first 8 bits are for IDLE state, next
          * 8 bits are for SWIPE state and third 8 bits are for DRAG state.
          * Each 8 bit sections can be constructed by simply OR'ing direction flags defined in
-         * {@link WItemTouchHelperPlus}.
+         * {@link WeItemTouchHelper}.
          * <p>
          * For example, if you want it to allow swiping LEFT and RIGHT but only allow starting to
          * swipe by swiping RIGHT, you can return:
@@ -1680,7 +1744,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * This means, allow right movement while IDLE and allow right and left movement while
          * swiping.
          *
-         * @param recyclerView The RecyclerView to which WItemTouchHelperPlus is attached.
+         * @param recyclerView The RecyclerView to which WeItemTouchHelper is attached.
          * @param viewHolder   The ViewHolder for which the movement information is necessary.
          * @return flags specifying which movements are allowed on this ViewHolder.
          * @see #makeMovementFlags(int, int)
@@ -1689,7 +1753,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         public abstract int getMovementFlags(RecyclerView recyclerView,
                                              RecyclerView.ViewHolder viewHolder);
 
-        public abstract String getItemSlideType();
+        public abstract int getItemSlideType();
 
         /**
          * Converts a given set of flags to absolution direction which means {@link #START} and
@@ -1745,7 +1809,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * <p>
          * Default implementation returns true.
          *
-         * @param recyclerView The RecyclerView to which WItemTouchHelperPlus is attached to.
+         * @param recyclerView The RecyclerView to which WeItemTouchHelper is attached to.
          * @param current      The ViewHolder that user is dragging.
          * @param target       The ViewHolder which is below the dragged ViewHolder.
          * @return True if the dragged ViewHolder can be replaced with the target ViewHolder, false
@@ -1757,17 +1821,17 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called when WItemTouchHelperPlus wants to move the dragged item from its old position to
+         * Called when WeItemTouchHelper wants to move the dragged item from its old position to
          * the new position.
          * <p>
-         * If this method returns true, WItemTouchHelperPlus assumes {@code viewHolder} has been moved
+         * If this method returns true, WeItemTouchHelper assumes {@code viewHolder} has been moved
          * to the adapter position of {@code target} ViewHolder
          * ({@link RecyclerView.ViewHolder#getAdapterPosition()
          * ViewHolder#getAdapterPosition()}).
          * <p>
          * If you don't support drag & drop, this method will never be called.
          *
-         * @param recyclerView The RecyclerView to which WItemTouchHelperPlus is attached to.
+         * @param recyclerView The RecyclerView to which WeItemTouchHelper is attached to.
          * @param viewHolder   The ViewHolder which is being dragged by the user.
          * @param target       The ViewHolder over which the currently active item is being
          *                     dragged.
@@ -1779,13 +1843,13 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                                        RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target);
 
         /**
-         * Returns whether WItemTouchHelperPlus should start a drag and drop operation if an item is
+         * Returns whether WeItemTouchHelper should start a drag and drop operation if an item is
          * long pressed.
          * <p>
          * Default value returns true but you may want to disable this if you want to start
          * dragging on a custom view touch using {@link #startDrag(RecyclerView.ViewHolder)}.
          *
-         * @return True if WItemTouchHelperPlus should start dragging an item when it is long pressed,
+         * @return True if WeItemTouchHelper should start dragging an item when it is long pressed,
          * false otherwise. Default value is <code>true</code>.
          * @see #startDrag(RecyclerView.ViewHolder)
          */
@@ -1794,13 +1858,13 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Returns whether WItemTouchHelperPlus should start a swipe operation if a pointer is swiped
+         * Returns whether WeItemTouchHelper should start a swipe operation if a pointer is swiped
          * over the View.
          * <p>
          * Default value returns true but you may want to disable this if you want to start
          * swiping on a custom view touch using {@link #startSwipe(RecyclerView.ViewHolder)}.
          *
-         * @return True if WItemTouchHelperPlus should start swiping an item when user swipes a pointer
+         * @return True if WeItemTouchHelper should start swiping an item when user swipes a pointer
          * over the View, false otherwise. Default value is <code>true</code>.
          * @see #startSwipe(RecyclerView.ViewHolder)
          */
@@ -1809,7 +1873,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * When finding views under a dragged view, by default, WItemTouchHelperPlus searches for views
+         * When finding views under a dragged view, by default, WeItemTouchHelper searches for views
          * that overlap with the dragged View. By overriding this method, you can extend or shrink
          * the search box.
          *
@@ -1836,7 +1900,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
 
         /**
          * Returns the fraction that the user should move the View to be considered as it is
-         * dragged. After a view is moved this amount, WItemTouchHelperPlus starts checking for Views
+         * dragged. After a view is moved this amount, WeItemTouchHelper starts checking for Views
          * below it for a possible drop.
          *
          * @param viewHolder The ViewHolder that is being dragged.
@@ -1851,7 +1915,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * Defines the minimum velocity which will be considered as a swipe action by the user.
          * <p>
          * You can increase this value to make it harder to swipe or decrease it to make it easier.
-         * Keep in mind that WItemTouchHelperPlus also checks the perpendicular velocity and makes sure
+         * Keep in mind that WeItemTouchHelper also checks the perpendicular velocity and makes sure
          * current direction velocity is larger then the perpendicular one. Otherwise, user's
          * movement is ambiguous. You can change the threshold by overriding
          * {@link #getSwipeVelocityThreshold(float)}.
@@ -1862,7 +1926,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * multiplier.
          *
          * @param defaultValue The default value (in pixels per second) used by the
-         *                     WItemTouchHelperPlus.
+         *                     WeItemTouchHelper.
          * @return The minimum swipe velocity. The default implementation returns the
          * <code>defaultValue</code> parameter.
          * @see #getSwipeVelocityThreshold(float)
@@ -1873,9 +1937,9 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Defines the maximum velocity WItemTouchHelperPlus will ever calculate for pointer movements.
+         * Defines the maximum velocity WeItemTouchHelper will ever calculate for pointer movements.
          * <p>
-         * To consider a movement as swipe, WItemTouchHelperPlus requires it to be larger than the
+         * To consider a movement as swipe, WeItemTouchHelper requires it to be larger than the
          * perpendicular movement. If both directions reach to the max threshold, none of them will
          * be considered as a swipe because it is usually an indication that user rather tried to
          * scroll then swipe.
@@ -1886,7 +1950,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * will be easier for the user to swipe diagonally and if you decrease the value, user will
          * need to make a rather straight finger movement to trigger a swipe.
          *
-         * @param defaultValue The default value(in pixels per second) used by the WItemTouchHelperPlus.
+         * @param defaultValue The default value(in pixels per second) used by the WeItemTouchHelper.
          * @return The velocity cap for pointer movements. The default implementation returns the
          * <code>defaultValue</code> parameter.
          * @see #getSwipeEscapeVelocity(float)
@@ -1896,7 +1960,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called by WItemTouchHelperPlus to select a drop target from the list of ViewHolders that
+         * Called by WeItemTouchHelper to select a drop target from the list of ViewHolders that
          * are under the dragged View.
          * <p>
          * Default implementation filters the View with which dragged item have changed position
@@ -1986,9 +2050,9 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * <p>
          * If you don't support swiping, this method will never be called.
          * <p>
-         * WItemTouchHelperPlus will keep a reference to the View until it is detached from
+         * WeItemTouchHelper will keep a reference to the View until it is detached from
          * RecyclerView.
-         * As soon as it is detached, WItemTouchHelperPlus will call
+         * As soon as it is detached, WeItemTouchHelper will call
          * {@link #clearView(RecyclerView, RecyclerView.ViewHolder)}.
          *
          * @param viewHolder The ViewHolder which has been swiped by the user.
@@ -2004,15 +2068,15 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         public abstract void onSwiped(RecyclerView.ViewHolder viewHolder, int direction);
 
         /**
-         * Called when the ViewHolder swiped or dragged by the WItemTouchHelperPlus is changed.
+         * Called when the ViewHolder swiped or dragged by the WeItemTouchHelper is changed.
          * <p/>
          * If you override this method, you should call super.
          *
          * @param viewHolder  The new ViewHolder that is being swiped or dragged. Might be null if
          *                    it is cleared.
-         * @param actionState One of {@link WItemTouchHelperPlus#ACTION_STATE_IDLE},
-         *                    {@link WItemTouchHelperPlus#ACTION_STATE_SWIPE} or
-         *                    {@link WItemTouchHelperPlus#ACTION_STATE_DRAG}.
+         * @param actionState One of {@link WeItemTouchHelper#ACTION_STATE_IDLE},
+         *                    {@link WeItemTouchHelper#ACTION_STATE_SWIPE} or
+         *                    {@link WeItemTouchHelper#ACTION_STATE_DRAG}.
          * @see #clearView(RecyclerView, RecyclerView.ViewHolder)
          */
         public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
@@ -2032,7 +2096,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         /**
          * Called when {@link #onMove(RecyclerView, RecyclerView.ViewHolder, RecyclerView.ViewHolder)} returns true.
          * <p>
-         * WItemTouchHelperPlus does not create an extra Bitmap or View while dragging, instead, it
+         * WeItemTouchHelper does not create an extra Bitmap or View while dragging, instead, it
          * modifies the existing View. Because of this reason, it is important that the View is
          * still part of the layout after it is moved. This may not work as intended when swapped
          * Views are close to RecyclerView bounds or there are gaps between them (e.g. other Views
@@ -2049,7 +2113,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * removed by the LayoutManager if the move causes the View to go out of bounds. In that
          * case, drag will end prematurely.
          *
-         * @param recyclerView The RecyclerView controlled by the WItemTouchHelperPlus.
+         * @param recyclerView The RecyclerView controlled by the WeItemTouchHelper.
          * @param viewHolder   The ViewHolder under user's control.
          * @param fromPos      The previous adapter position of the dragged item (before it was
          *                     moved).
@@ -2066,8 +2130,8 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
                             final RecyclerView.ViewHolder viewHolder, int fromPos, final RecyclerView.ViewHolder target, int toPos, int x,
                             int y) {
             final RecyclerView.LayoutManager layoutManager = recyclerView.getLayoutManager();
-            if (layoutManager instanceof WItemTouchHelperPlus.ViewDropHandler) {
-                ((WItemTouchHelperPlus.ViewDropHandler) layoutManager).prepareForDrop(viewHolder.itemView,
+            if (layoutManager instanceof WeItemTouchHelper.ViewDropHandler) {
+                ((WeItemTouchHelper.ViewDropHandler) layoutManager).prepareForDrop(viewHolder.itemView,
                         target.itemView, x, y);
                 return;
             }
@@ -2097,11 +2161,11 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         void onDraw(Canvas c, RecyclerView parent, RecyclerView.ViewHolder selected,
-                    List<WItemTouchHelperPlus.RecoverAnimation> recoverAnimationList,
+                    List<WeItemTouchHelper.RecoverAnimation> recoverAnimationList,
                     int actionState, float dX, float dY) {
             final int recoverAnimSize = recoverAnimationList.size();
             for (int i = 0; i < recoverAnimSize; i++) {
-                final WItemTouchHelperPlus.RecoverAnimation anim = recoverAnimationList.get(i);
+                final WeItemTouchHelper.RecoverAnimation anim = recoverAnimationList.get(i);
                 anim.update();
                 final int count = c.save();
                 onChildDraw(c, parent, anim.mViewHolder, anim.mX, anim.mY, anim.mActionState,
@@ -2116,11 +2180,11 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.ViewHolder selected,
-                        List<WItemTouchHelperPlus.RecoverAnimation> recoverAnimationList,
+                        List<WeItemTouchHelper.RecoverAnimation> recoverAnimationList,
                         int actionState, float dX, float dY) {
             final int recoverAnimSize = recoverAnimationList.size();
             for (int i = 0; i < recoverAnimSize; i++) {
-                final WItemTouchHelperPlus.RecoverAnimation anim = recoverAnimationList.get(i);
+                final WeItemTouchHelper.RecoverAnimation anim = recoverAnimationList.get(i);
                 final int count = c.save();
                 onChildDrawOver(c, parent, anim.mViewHolder, anim.mX, anim.mY, anim.mActionState,
                         false);
@@ -2133,7 +2197,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
             }
             boolean hasRunningAnimation = false;
             for (int i = recoverAnimSize - 1; i >= 0; i--) {
-                final WItemTouchHelperPlus.RecoverAnimation anim = recoverAnimationList.get(i);
+                final WeItemTouchHelper.RecoverAnimation anim = recoverAnimationList.get(i);
                 if (anim.mEnded && !anim.mIsPendingCleanup) {
                     recoverAnimationList.remove(i);
                 } else if (!anim.mEnded) {
@@ -2146,7 +2210,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called by the WItemTouchHelperPlus when the user interaction with an element is over and it
+         * Called by the WeItemTouchHelper when the user interaction with an element is over and it
          * also completed its animation.
          * <p>
          * This is a good place to clear all changes on the View that was done in
@@ -2155,7 +2219,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * boolean)} or
          * {@link #onChildDrawOver(Canvas, RecyclerView, RecyclerView.ViewHolder, float, float, int, boolean)}.
          *
-         * @param recyclerView The RecyclerView which is controlled by the WItemTouchHelperPlus.
+         * @param recyclerView The RecyclerView which is controlled by the WeItemTouchHelper.
          * @param viewHolder   The View that was interacted by the user.
          */
         public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
@@ -2163,21 +2227,21 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called by WItemTouchHelperPlus on RecyclerView's onDraw callback.
+         * Called by WeItemTouchHelper on RecyclerView's onDraw callback.
          * <p>
          * If you would like to customize how your View's respond to user interactions, this is
          * a good place to override.
          * <p>
          * Default implementation translates the child by the given <code>dX</code>,
          * <code>dY</code>.
-         * WItemTouchHelperPlus also takes care of drawing the child after other children if it is being
+         * WeItemTouchHelper also takes care of drawing the child after other children if it is being
          * dragged. This is done using child re-ordering mechanism. On platforms prior to L, this
          * is
          * achieved via {@link android.view.ViewGroup#getChildDrawingOrder(int, int)} and on L
          * and after, it changes View's elevation value to be greater than all other children.)
          *
          * @param c                 The canvas which RecyclerView is drawing its children
-         * @param recyclerView      The RecyclerView to which WItemTouchHelperPlus is attached to
+         * @param recyclerView      The RecyclerView to which WeItemTouchHelper is attached to
          * @param viewHolder        The ViewHolder which is being interacted by the User or it was
          *                          interacted and simply animating to its original position
          * @param dX                The amount of horizontal displacement caused by user's action
@@ -2197,21 +2261,21 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called by WItemTouchHelperPlus on RecyclerView's onDraw callback.
+         * Called by WeItemTouchHelper on RecyclerView's onDraw callback.
          * <p>
          * If you would like to customize how your View's respond to user interactions, this is
          * a good place to override.
          * <p>
          * Default implementation translates the child by the given <code>dX</code>,
          * <code>dY</code>.
-         * WItemTouchHelperPlus also takes care of drawing the child after other children if it is being
+         * WeItemTouchHelper also takes care of drawing the child after other children if it is being
          * dragged. This is done using child re-ordering mechanism. On platforms prior to L, this
          * is
          * achieved via {@link android.view.ViewGroup#getChildDrawingOrder(int, int)} and on L
          * and after, it changes View's elevation value to be greater than all other children.)
          *
          * @param c                 The canvas which RecyclerView is drawing its children
-         * @param recyclerView      The RecyclerView to which WItemTouchHelperPlus is attached to
+         * @param recyclerView      The RecyclerView to which WeItemTouchHelper is attached to
          * @param viewHolder        The ViewHolder which is being interacted by the User or it was
          *                          interacted and simply animating to its original position
          * @param dX                The amount of horizontal displacement caused by user's action
@@ -2231,7 +2295,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called by the WItemTouchHelperPlus when user action finished on a ViewHolder and now the View
+         * Called by the WeItemTouchHelper when user action finished on a ViewHolder and now the View
          * will be animated to its final position.
          * <p>
          * Default implementation uses ItemAnimator's duration values. If
@@ -2242,7 +2306,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * {@code DEFAULT_DRAG_ANIMATION_DURATION} or {@code DEFAULT_SWIPE_ANIMATION_DURATION}
          * depending on the animation type.
          *
-         * @param recyclerView  The RecyclerView to which the WItemTouchHelperPlus is attached to.
+         * @param recyclerView  The RecyclerView to which the WeItemTouchHelper is attached to.
          * @param animationType The type of animation. Is one of {@link #ANIMATION_TYPE_DRAG},
          *                      {@link #ANIMATION_TYPE_SWIPE_CANCEL} or
          *                      {@link #ANIMATION_TYPE_SWIPE_SUCCESS}.
@@ -2263,7 +2327,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
         }
 
         /**
-         * Called by the WItemTouchHelperPlus when user is dragging a view out of bounds.
+         * Called by the WeItemTouchHelper when user is dragging a view out of bounds.
          * <p>
          * You can override this method to decide how much RecyclerView should scroll in response
          * to this action. Default implementation calculates a value based on the amount of View
@@ -2271,7 +2335,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * the faster the list will scroll. Similarly, the larger portion of the View is out of
          * bounds, the faster the RecyclerView will scroll.
          *
-         * @param recyclerView        The RecyclerView instance to which WItemTouchHelperPlus is
+         * @param recyclerView        The RecyclerView instance to which WeItemTouchHelper is
          *                            attached to.
          * @param viewSize            The total size of the View in scroll direction, excluding
          *                            item decorations.
@@ -2314,9 +2378,9 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      * onSwiped depending on your use case.
      * <p>
      * <pre>
-     * WItemTouchHelperPlus mIth = new WItemTouchHelperPlus(
-     *     new WItemTouchHelperPlus.SimpleCallback(WItemTouchHelperPlus.UP | WItemTouchHelperPlus.DOWN,
-     *         WItemTouchHelperPlus.LEFT) {
+     * WeItemTouchHelper mIth = new WeItemTouchHelper(
+     *     new WeItemTouchHelper.SimpleCallback(WeItemTouchHelper.UP | WeItemTouchHelper.DOWN,
+     *         WeItemTouchHelper.LEFT) {
      *         public abstract boolean onMove(RecyclerView recyclerView,
      *             ViewHolder viewHolder, ViewHolder target) {
      *             final int fromPos = viewHolder.getAdapterPosition();
@@ -2330,7 +2394,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
      * });
      * </pre>
      */
-    public abstract static class SimpleCallback extends WItemTouchHelperPlus.Callback {
+    public abstract static class SimpleCallback extends WeItemTouchHelper.Callback {
 
         private int mDefaultSwipeDirs;
 
@@ -2382,7 +2446,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * Default implementation returns the swipe directions that was set via constructor or
          * {@link #setDefaultSwipeDirs(int)}.
          *
-         * @param recyclerView The RecyclerView to which the WItemTouchHelperPlus is attached to.
+         * @param recyclerView The RecyclerView to which the WeItemTouchHelper is attached to.
          * @param viewHolder   The RecyclerView for which the swipe direction is queried.
          * @return A binary OR of direction flags.
          */
@@ -2395,7 +2459,7 @@ public class WItemTouchHelperPlus extends RecyclerView.ItemDecoration
          * Default implementation returns the drag directions that was set via constructor or
          * {@link #setDefaultDragDirs(int)}.
          *
-         * @param recyclerView The RecyclerView to which the WItemTouchHelperPlus is attached to.
+         * @param recyclerView The RecyclerView to which the WeItemTouchHelper is attached to.
          * @param viewHolder   The RecyclerView for which the swipe direction is queried.
          * @return A binary OR of direction flags.
          */

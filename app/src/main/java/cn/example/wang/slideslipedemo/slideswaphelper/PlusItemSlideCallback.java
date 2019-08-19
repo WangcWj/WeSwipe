@@ -2,7 +2,6 @@ package cn.example.wang.slideslipedemo.slideswaphelper;
 
 import android.graphics.Canvas;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.helper.ItemTouchHelper;
 
 /**
  *
@@ -17,11 +16,11 @@ import android.support.v7.widget.helper.ItemTouchHelper;
  *
  */
 
-public class PlusItemSlideCallback extends WItemTouchHelperPlus.Callback {
+public class PlusItemSlideCallback extends WeItemTouchHelper.Callback {
 
-    private String type;
+    private int type;
 
-    public void setType(String type) {
+    public void setType(int type) {
         this.type = type;
     }
 
@@ -30,27 +29,40 @@ public class PlusItemSlideCallback extends WItemTouchHelperPlus.Callback {
         return true;
     }
 
-
-    @Override
-    int getSlideViewWidth() {
-        return 0;
-    }
-
     @Override
     public int getMovementFlags(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-        return makeMovementFlags(0, ItemTouchHelper.START);
+        return makeMovementFlags(0, WeItemTouchHelper.START|WeItemTouchHelper.ACTION_STATE_SWIPE);
     }
 
     @Override
-    public String getItemSlideType() {
+    public int getItemSlideType() {
         return type;
     }
 
+    /**
+     * 拖动的时候才会触发。
+     * @param recyclerView The RecyclerView to which WeItemTouchHelper is attached to.
+     * @param viewHolder   The ViewHolder which is being dragged by the user.
+     * @param target       The ViewHolder over which the currently active item is being
+     *                     dragged.
+     * @return
+     */
     @Override
     public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
         return false;
     }
 
+    /**
+     * 当ItemView被滑动的时候调用。
+     * @param viewHolder The ViewHolder which has been swiped by the user.
+     * @param direction  The direction to which the ViewHolder is swiped. It is one of
+     *                   {@link #UP}, {@link #DOWN},
+     *                   {@link #LEFT} or {@link #RIGHT}. If your
+     *                   {@link #getMovementFlags(RecyclerView, RecyclerView.ViewHolder)}
+     *                   method
+     *                   returned relative flags instead of {@link #LEFT} / {@link #RIGHT};
+     *                   `direction` will be relative as well. ({@link #START} or {@link
+     */
     @Override
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
 
@@ -72,5 +84,10 @@ public class PlusItemSlideCallback extends WItemTouchHelperPlus.Callback {
     @Override
     public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
         super.clearView(recyclerView, viewHolder);
+    }
+
+    @Override
+    public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+        super.onSelectedChanged(viewHolder, actionState);
     }
 }

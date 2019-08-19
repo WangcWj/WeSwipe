@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import cn.example.wang.slideslipedemo.slideswaphelper.PlusItemSlideCallback;
-import cn.example.wang.slideslipedemo.slideswaphelper.WItemTouchHelperPlus;
+import cn.example.wang.slideslipedemo.slideswaphelper.WeItemTouchHelper;
 
 public class SlideOtherTypeActivity extends AppCompatActivity implements RecAdapter.DeletedItemListener{
     RecyclerView recyclerView;
@@ -45,7 +45,7 @@ public class SlideOtherTypeActivity extends AppCompatActivity implements RecAdap
         recyclerView.setAdapter(recAdapter);
 
         PlusItemSlideCallback callback = new PlusItemSlideCallback();
-        WItemTouchHelperPlus extension = new WItemTouchHelperPlus(callback);
+        WeItemTouchHelper extension = new WeItemTouchHelper(callback);
         extension.attachToRecyclerView(recyclerView);
     }
 
