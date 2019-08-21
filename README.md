@@ -1,5 +1,7 @@
 # WItemTouchHelperPlus
 
+** 项目升级: ** 目前项目正在完善中...感谢大家的意见!
+
 ### 效果图   仿qq侧滑</br>
 
 ![](https://raw.githubusercontent.com/WangcWj/image-folder/master/slide.gif)
