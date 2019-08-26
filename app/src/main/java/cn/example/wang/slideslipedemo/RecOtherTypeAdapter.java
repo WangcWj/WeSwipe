@@ -11,13 +11,13 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.example.wang.slideslipedemo.slideswaphelper.SlideSwapAction;
+import cn.we.swipe.helper.WeSwipeHelper;
 
 /**
  * Created by WANG on 18/4/24.
  */
 
-public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapter.RecViewholder> {
+public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapter.RecViewHolder> {
 
 
     private Context context;
@@ -51,13 +51,13 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
     }
 
     @Override
-    public RecViewholder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public RecViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = layoutInflater.inflate(R.layout.layout_item, parent, false);
-        return new RecViewholder(view);
+        return new RecViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(final RecViewholder holder, final int position) {
+    public void onBindViewHolder(final RecViewHolder holder, final int position) {
         String s = data.get(holder.getAdapterPosition());
         holder.textView.setText(s);
         holder.textView.setOnClickListener(new View.OnClickListener() {
@@ -85,11 +85,11 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
     /**
      * view.getWidth()获取的是屏幕中可以看到的大小.
      */
-    public class RecViewholder extends RecyclerView.ViewHolder implements SlideSwapAction {
+    public class RecViewHolder extends RecyclerView.ViewHolder implements WeSwipeHelper.SwipeLayoutTypeCallBack {
         public TextView textView;
         public TextView slide;
 
-        public RecViewholder(View itemView) {
+        public RecViewHolder(View itemView) {
             super(itemView);
             textView = itemView.findViewById(R.id.item_text);
             slide = itemView.findViewById(R.id.item_slide);
@@ -97,15 +97,19 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
         }
 
         @Override
-        public float getActionWidth() {
-            return dip2px(slide.getContext(), 100);
+        public float getSwipeWidth() {
+            return slide.getWidth();
         }
 
         @Override
-        public View ItemView() {
+        public View needSwipeLayout() {
             return textView;
         }
 
+        @Override
+        public View onScreenView() {
+            return textView;
+        }
     }
 
     /**

@@ -13,7 +13,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.example.wang.slideslipedemo.slideswaphelper.SlideSwapAction;
+import cn.we.swipe.helper.WeSwipeHelper;
 
 /**
  * Created by WANG on 18/4/24.
@@ -100,7 +100,7 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     /**
      * view.getWidth()获取的是屏幕中可以看到的大小.
      */
-    public class RecViewholder extends RecyclerView.ViewHolder implements SlideSwapAction {
+    public class RecViewholder extends RecyclerView.ViewHolder implements WeSwipeHelper.SwipeLayoutTypeCallBack {
         public TextView textView;
         public LinearLayout slide;
         public TextView zhiding, yidu, shanchu;
@@ -117,16 +117,20 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
         }
 
         @Override
-        public float getActionWidth() {
+        public float getSwipeWidth() {
             //布局隐藏超过父布局的范围的时候这里得不到宽度
             return dip2px(context, 240);
         }
 
         @Override
-        public View ItemView() {
+        public View needSwipeLayout() {
             return slideItem;
         }
 
+        @Override
+        public View onScreenView() {
+            return textView;
+        }
     }
 
     /**

@@ -10,8 +10,8 @@ import android.support.v7.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.example.wang.slideslipedemo.slideswaphelper.PlusItemSlideCallback;
-import cn.example.wang.slideslipedemo.slideswaphelper.WeItemTouchHelper;
+import cn.we.swipe.helper.WeSwipe;
+import cn.we.swipe.helper.WeSwipeHelper;
 
 /**
  * 1.侧滑的距离可控。
@@ -54,15 +54,8 @@ public class MainActivity extends AppCompatActivity implements RecAdapter.Delete
         recAdapter = new RecAdapter(this);
         recAdapter.setDelectedItemListener(this);
         recyclerView.setAdapter(recAdapter);
-        /*ItemTouchHelperCallback touchHelperCallback = new ItemTouchHelperCallback();
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(touchHelperCallback);
-        itemTouchHelper.attachToRecyclerView(recyclerView);*/
-
-        //作为一个ItemDecoration 写入的
-        PlusItemSlideCallback callback = new PlusItemSlideCallback();
-        callback.setType(WeItemTouchHelper.SWIPE_ITEM_TYPE_FLOWWING);
-        WeItemTouchHelper extension = new WeItemTouchHelper(callback);
-        extension.attachToRecyclerView(recyclerView);
+        //设置WeSwipe。
+        WeSwipe.attach(recyclerView).setType(WeSwipeHelper.SWIPE_ITEM_TYPE_FLOWING);
     }
 
     @Override

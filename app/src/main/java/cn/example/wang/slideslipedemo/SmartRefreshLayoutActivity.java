@@ -15,8 +15,8 @@ import com.scwang.smartrefresh.layout.listener.OnRefreshListener;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.example.wang.slideslipedemo.slideswaphelper.PlusItemSlideCallback;
-import cn.example.wang.slideslipedemo.slideswaphelper.WeItemTouchHelper;
+import cn.we.swipe.helper.WeSwipe;
+
 
 /**
  * @author WANG
@@ -64,9 +64,7 @@ public class SmartRefreshLayoutActivity extends AppCompatActivity implements Rec
         recAdapter.setDeletedItemListener(this);
         recyclerView.setAdapter(recAdapter);
 
-        PlusItemSlideCallback callback = new PlusItemSlideCallback();
-        WeItemTouchHelper extension = new WeItemTouchHelper(callback);
-        extension.attachToRecyclerView(recyclerView);
+        WeSwipe.attach(recyclerView);
     }
 
     @Override

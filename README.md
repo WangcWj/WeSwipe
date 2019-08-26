@@ -1,123 +1,134 @@
-# WItemTouchHelperPlus
+### WeSwipe：
 
-**项目升级:** 目前项目正在完善中...感谢大家的意见!
+`WeSwipe`是帮助`RecyclerView`实现侧滑菜单的功能类，其原理是根据系统帮助类`ItemTouchHelper`实现的。该类支持两种类型的侧滑，具体效果看下面的效果图：
 
-### 效果图   仿qq侧滑</br>
+**致谢：**提出问题的优秀开发者们，同时你提出的问题会在第一时间进行恢复，最终`WeSwipe`将会变成你想要的样子~~~
+
+```java
+type = SWIPE_ITEM_TYPE_FLOWING //表示侧滑菜单是跟随ItemView的。
+type = SWIPE_ITEM_TYPE_DEFAULT //表示侧滑菜单是在ItemView的下面。   
+```
+
+**类型为SWIPE_ITEM_TYPE_FLOWING：**
 
 ![](https://raw.githubusercontent.com/WangcWj/image-folder/master/slide.gif)
 
-### 效果图   一般侧滑</br>
+**类型为SWIPE_ITEM_TYPE_DEFAULT：**
 
 ![](https://raw.githubusercontent.com/WangcWj/image-folder/master/videotogif_2018.05.02_19.02.16.gif)
 
+#### 使用：[![](https://jitpack.io/v/WangcWj/WeSwipe.svg)](https://jitpack.io/#WangcWj/WeSwipe)
 
+**V 1.0.1 ：**项目改造完成，省去繁杂的操作，简化使用步骤。侧滑的流畅性提升，仿照`qq`侧滑的展开跟恢复效果改造。  
 
-该demo展示了如何高效的使用系统类ItemTouchHelper结合RecyclerView去实现侧滑删除的功能。考虑到布局多层嵌套跟列表滑动的流畅度，舍弃了自定义view去实现的想法。WItemTouchHelperPlus改进了系统类ItemTouchHelper的功能，实现了如下图所示的两种侧滑方案：
+**敬请期待：**`v 1.0.2 `中将加入侧滑状态的获取；以及侧滑开始、侧滑打开、侧滑关闭各阶段的回调；支持每个`ViewHolder`自己选择是否支持侧滑，并不仅限于设置整个`RecyclerView`。
 
-* 图一 侧滑的布局跟随Item滑动。
-* 图二 侧滑的布局隐藏在Item布局的下面。
+**一 ：**
 
-#### 原理：
+项目的根`build.gradle`文件中加入：
 
-侧滑就是将指定布局平移一定的距离之后显示你要显示的其它布局，之后将平移之后的布局恢复原位。
-
-#### 使用：
-
-1 在要移动的xml布局中设置tag。
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="50dp"
-    android:layout_marginBottom="1dp"
-    android:clipChildren="false">
-
-    <RelativeLayout
-        android:id="@+id/slide_itemView"
-        android:clipChildren="false"
-        android:tag="slide_flag"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <TextView
-            android:id="@+id/item_text"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="#e1e1e1"
-            android:gravity="center"
-            android:text="item"
-            android:textColor="#333333"
-            android:textSize="16sp" />
-       //这个显示"删除" 按钮类似的布局
-
-    </RelativeLayout>
-
-</RelativeLayout>
+```groovy
+allprojects {
+		repositories {
+			...
+			maven { url 'https://jitpack.io' }
+		}
+}
 ```
 
+**二 ：**
 
+那个`Module`中要使用`WeSwipe`，就在那个`Module`的`build.gradle`文件中加入：
 
-2 在RecyclerView.Adapter中使用的ViewHolder里面或者是别的地方（只要能拿到我们要显示的侧滑布局的View就好），实现SlideSwapAction接口并返回指定的值。
+```groovy
+dependencies {
+	        implementation 'com.github.WangcWj:WeSwipe:version'
+}
+```
+
+**三 ：**
+
+确保引入成功之后，在需要侧滑菜单的`RecyclerView`的`ViewHolder`中实现`SwipeLayoutTypeCallBack`接口，并实现特定的方法。这里就要区分滑动菜单的类型，如果类型是`SWIPE_ITEM_TYPE_DEFAULT`，也是默认的类型，你需要做的就是：
 
 ```java
+public class RecViewHolder extends RecyclerView.ViewHolder 
+implements WeSwipeHelper.SwipeLayoutTypeCallBack {
 
-public  class RecViewholder extends RecyclerView.ViewHolder implements SlideSwapAction {
-        public TextView textView;//item布局.
-        public TextView slide;//显示"删除"布局.
+        public TextView textView;
+        public TextView slide;
 
-        public RecViewholder(View itemView) {
+        public RecViewHolder(View itemView) {
             super(itemView);
             textView = itemView.findViewById(R.id.item_text);
             slide = itemView.findViewById(R.id.item_slide);
 
         }
-       
+        //侧滑菜单的宽度，也是侧滑的距离。方法1.
         @Override
-        public float getActionWidth() {
-            //返回侧滑移动的距离,必须写,切注意view.getWidth()得到是否为0.
-            return  slide.getWidth();
+        public float getSwipeWidth() {
+            return slide.getWidth();
         }
-
+        //需要发生滑动的布局。方法2.
         @Override
-        public View ItemView() {
-            //这个是要移动的布局.
+        public View needSwipeLayout() {
             return textView;
         }
-
+        //未滑动之前展现在屏幕中的布局。方法3.
+        @Override
+        public View onScreenView() {
+            return textView;
+        }
     }
 ```
 
-3 绑定RecyclerView。
+你的`ViewHolder`必须继承`SwipeLayoutTypeCallBack`接口，并重写三个方法。目的是为了`WeSwipeHelper`可以准确的知道滑动布局的信息。布局文件：
 
-需要注意的是，策划的类型不同callback.setType就不一样，如果是跟qq那样展示侧滑的布局跟在item布局的后面那就需要设置type为WItemTouchHelperPlus.SLIDE_ITEM_TYPE_ITEMVIEW。如果item布局是覆盖再侧滑布局的上面则无需设置。
+![](https://raw.githubusercontent.com/WangcWj/image-folder/master/swipe2.png)
+
+上面的**方法1**中返回的侧滑的宽度就是`xml`中**红色框1**所标记的`View`的宽度，也就是`删除`按钮的宽度。**方法2**中返回的`View`是图中**红色框2**所标记的，侧滑移动的就是该`View`。**方法3**中返回的`View`也是图中**红色框2**所标记的，在未发生侧滑的时候，屏幕中显示的是该布局。
+
+因为`删除`所表示的侧滑菜单的布局，是被`id`为`item_text`的布局遮挡住的，所以需要将该布局平移一定的距离，才能显示出来侧滑菜单布局。
+
+![](https://raw.githubusercontent.com/WangcWj/image-folder/master/swipe3.png)
+
+以上只是对侧滑类型为`SWIPE_ITEM_TYPE_DEFAULT`的解释。对于类型为`SWIPE_ITEM_TYPE_FLOWING`的就需要自行理解了，或者查看`Demo`。
+
+**四 关联RecyclerView：**
 
 ```java
-//侧滑布局跟随
- PlusItemSlideCallback callback = new PlusItemSlideCallback();
- callback.setType(WItemTouchHelperPlus.SLIDE_ITEM_TYPE_ITEMVIEW);
- WItemTouchHelperPlus extension = new WItemTouchHelperPlus(callback);
- extension.attachToRecyclerView(recyclerView);
-
- //侧滑布局被覆盖
- PlusItemSlideCallback callback = new PlusItemSlideCallback();
- WItemTouchHelperPlus extension = new WItemTouchHelperPlus(callback);
- extension.attachToRecyclerView(recyclerView);
+//设置WeSwipe。
+WeSwipe.attach(recyclerView);
 ```
+
+支持设置侧滑类型、侧滑恢复动画的执行事件、是否支持侧滑（限于`RecyclerView`）、是否打开`Debug`。
+
+**最后在强调一下`SwipeLayoutTypeCallBack`接口中的三个方法：**
+
+* `getSwipeWidth()`
+
+  也就是你侧滑平移多长的距离。
+
+* `needSwipeLayout()`
+
+  需要发生平移的布局，只有该布局平移走，才能显示出你的侧滑菜单布局。
+
+* `onScreenView()`
+
+  这个`View`其实是为了在侧滑菜单显示的时候，点击侧滑菜单布局响应点击事件，点击的`View`不是侧滑菜单的话恢复侧滑。所以该View的返回一定要根据现实的情况。
 
 #### 注意：
 
-当你使用侧滑删除的时候为了避免各种item错乱或者position错乱的问题，建议您选择这样的删除跟刷新方式，建议采用第一种删除刷新方法：
+当你使用侧滑删除的时候为了避免各种`item`错乱或者`position`错乱的问题，建议您选择这样的删除跟刷新方式，建议采用该种刷新方法：
 
-* 采用notifyItemRemoved(position)+ notifyItemRangeChanged(position,data.size()-1)方法，position采用holder.getAdapterPosition()。
+* 采用`notifyItemRemoved(position)+ notifyItemRangeChanged(position,data.size()-1)`方法，`position`采用`holder.getAdapterPosition()`。
 
-1.使用notifyDataSetChange()方法的时候会导致侧滑的布局出现复用的问题。
+**可能出现的问题：**
 
-2.当只使用notifyItemRemoved(position)刷新时会出现该position之后的item的position未刷新，导致删除位置错乱。这是因为我们使用onBindViewHolder()方法里面的参数position，并且大多时候该参数还是final 的，这样就会导致点击事件里面的position位置未刷新。
+* 使用`notifyDataSetChange()`方法的时候会导致侧滑的布局出现复用的问题。
 
+* 当只使用`notifyItemRemoved(position)`刷新时会出现该`position`之后的`item`的位置未刷新，导致删除位置错乱。
 
-
-[![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
+#### 我们坚持：[![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)，好的身体才是革命的本钱！
 
 
 

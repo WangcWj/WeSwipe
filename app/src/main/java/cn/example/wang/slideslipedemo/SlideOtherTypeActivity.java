@@ -10,8 +10,8 @@ import android.support.v7.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-import cn.example.wang.slideslipedemo.slideswaphelper.PlusItemSlideCallback;
-import cn.example.wang.slideslipedemo.slideswaphelper.WeItemTouchHelper;
+import cn.we.swipe.helper.WeSwipe;
+
 
 public class SlideOtherTypeActivity extends AppCompatActivity implements RecAdapter.DeletedItemListener{
     RecyclerView recyclerView;
@@ -43,10 +43,8 @@ public class SlideOtherTypeActivity extends AppCompatActivity implements RecAdap
         recAdapter = new RecOtherTypeAdapter(this);
         recAdapter.setDeletedItemListener(this);
         recyclerView.setAdapter(recAdapter);
-
-        PlusItemSlideCallback callback = new PlusItemSlideCallback();
-        WeItemTouchHelper extension = new WeItemTouchHelper(callback);
-        extension.attachToRecyclerView(recyclerView);
+        //设置WeSwipe。
+        WeSwipe.attach(recyclerView);
     }
 
     @Override
