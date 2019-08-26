@@ -2,7 +2,7 @@
 
 `WeSwipe`是帮助`RecyclerView`实现侧滑菜单的功能类，其原理是根据系统帮助类`ItemTouchHelper`实现的。该类支持两种类型的侧滑，具体效果看下面的效果图：
 
-**致谢：**提出问题的优秀开发者们，同时你提出的问题会在第一时间进行恢复，最终`WeSwipe`将会变成你想要的样子~~~
+**致谢：** 提出问题的优秀开发者们，同时你提出的问题会在第一时间进行恢复，最终`WeSwipe`将会变成你想要的样子~~~
 
 ```java
 type = SWIPE_ITEM_TYPE_FLOWING //表示侧滑菜单是跟随ItemView的。
@@ -19,7 +19,7 @@ type = SWIPE_ITEM_TYPE_DEFAULT //表示侧滑菜单是在ItemView的下面。
 
 #### 使用：[![](https://jitpack.io/v/WangcWj/WeSwipe.svg)](https://jitpack.io/#WangcWj/WeSwipe)
 
-**V 1.0.1 ：**项目改造完成，省去繁杂的操作，简化使用步骤。侧滑的流畅性提升，仿照`qq`侧滑的展开跟恢复效果改造。  
+**V 1.0.1 ：** 项目改造完成，省去繁杂的操作，简化使用步骤。侧滑的流畅性提升，仿照`qq`侧滑的展开跟恢复效果改造。  
 
 **敬请期待：**`v 1.0.2 `中将加入侧滑状态的获取；以及侧滑开始、侧滑打开、侧滑关闭各阶段的回调；支持每个`ViewHolder`自己选择是否支持侧滑，并不仅限于设置整个`RecyclerView`。
 
