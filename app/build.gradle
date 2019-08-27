@@ -29,4 +29,6 @@ dependencies {
     implementation 'com.scwang.smartrefresh:SmartRefreshLayout:1.1.0-alpha-20'
     //Swipe
     implementation 'com.github.WangcWj:WeSwipe:1.0.1'
+    //Network
+    implementation 'cn.wang.wenet:wenet:1.0.1'
 }

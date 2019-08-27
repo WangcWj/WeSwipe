@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SideslippingDemo.iml" filepath="$PROJECT_DIR$/SideslippingDemo.iml" />
       <module fileurl="file://$PROJECT_DIR$/Swipe/Swipe.iml" filepath="$PROJECT_DIR$/Swipe/Swipe.iml" />
+      <module fileurl="file://$PROJECT_DIR$/WeSwipe.iml" filepath="$PROJECT_DIR$/WeSwipe.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>

@@ -12,6 +12,7 @@ import java.util.List;
 
 import cn.we.swipe.helper.WeSwipe;
 import cn.we.swipe.helper.WeSwipeHelper;
+import cn.wenet.networkcomponent.control.NetControl;
 
 /**
  * 1.侧滑的距离可控。
