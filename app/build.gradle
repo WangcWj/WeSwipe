@@ -30,5 +30,5 @@ dependencies {
     //Swipe
     implementation 'com.github.WangcWj:WeSwipe:1.0.1'
     //Network
-    implementation 'cn.wang.wenet:wenet:1.0.1'
+    implementation 'cn.wang.we:network:1.0.0'
 }
