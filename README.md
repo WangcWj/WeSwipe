@@ -21,7 +21,7 @@ type = SWIPE_ITEM_TYPE_DEFAULT //表示侧滑菜单是在ItemView的下面。
 
 为了能够及时的发现并更正该库所存在的问题，现邀请大家加入该微信群中，三人行必有我师，Android技术是无止境的。另外还有妹纸开发哦~：
 
-![](<https://raw.githubusercontent.com/WangcWj/WeSwipe/master/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_2.jpg>)
+### 先加入QQ群 `684891631` 再转微信群~
 
 #### 使用：[![](https://jitpack.io/v/WangcWj/WeSwipe.svg)](https://jitpack.io/#WangcWj/WeSwipe)
 
