@@ -29,6 +29,11 @@ import android.util.Log;
  */
 public class WeSwipe {
 
+    private WeSwipe() {
+    }
+
+    private static final int REGISTER_OBSERVER = 4;
+
     private final String TAG = "WeSwipe";
 
     private final int FLAG_MASK = 0x1;
@@ -44,6 +49,21 @@ public class WeSwipe {
      */
     private WeSwipeHelper mSwipeHelper;
 
+    private boolean mHaveAdapter;
+
+    public void recoverAll(RecoverCallback callback){
+        if(!haveInit()){
+           return;
+        }
+        mSwipeHelper.recoverPre(callback,mDuration);
+    }
+
+    public void recoverAll(RecoverCallback callback,long duration){
+        if(!haveInit()){
+            return;
+        }
+        mSwipeHelper.recoverPre(callback,duration);
+    }
 
     /**
      * 是否支持侧滑
@@ -51,12 +71,50 @@ public class WeSwipe {
      * @return
      */
     public boolean swipeEnable() {
-        haveInit();
-        return mSwipeHelper.swipeEnable();
+        if(haveInit()) {
+            return mSwipeHelper.swipeEnable();
+        }else {
+            return false;
+        }
+    }
+
+    public boolean haveRecoverItem() {
+        if(haveInit()){
+            return mSwipeHelper.haveRecoverItem();
+        }
+        return false;
     }
 
     public boolean isDebug() {
         return (mPrivateFlag & FLAG_MASK << 3) != 0;
+    }
+
+    public WeSwipe setAutoRecoverWhenAdapterNotify(RecyclerView.Adapter adapter, boolean autoRecover) {
+        if (null == adapter) {
+            throw new NullPointerException("WeSwipe#setAutoRecoverWhenAdapterNotify adapter is NULL !");
+        }
+        mHaveAdapter = true;
+
+        setAutoRecoverWhenAdapterNotify(autoRecover);
+        return this;
+    }
+
+    public WeSwipe setAutoRecoverWhenAdapterNotify(boolean autoRecover) {
+        if (!mHaveAdapter) {
+            throw new NullPointerException("WeSwipe#setAutoRecoverWhenAdapterNotify adapter is NULL !");
+        }
+        if (haveRegisterAdapterObserver()) {
+            if (!autoRecover) {
+                mPrivateFlag &= ~(FLAG_MASK << REGISTER_OBSERVER);
+            }
+        } else {
+            mPrivateFlag |= FLAG_MASK << REGISTER_OBSERVER;
+        }
+        return this;
+    }
+
+    public boolean haveRegisterAdapterObserver() {
+        return (mPrivateFlag & (FLAG_MASK << REGISTER_OBSERVER)) != 0;
     }
 
     /**
@@ -75,7 +133,7 @@ public class WeSwipe {
     /**
      * 设置该RecyclerView是否支持侧滑菜单栏.
      *
-     * @param enable
+     * @param enable true 支持侧滑 false 不支持侧滑。
      * @return
      */
     public WeSwipe setEnable(boolean enable) {
@@ -84,6 +142,8 @@ public class WeSwipe {
         }
         if (enable) {
             mPrivateFlag |= FLAG_MASK << 2;
+        }else {
+            mPrivateFlag &= ~(FLAG_MASK << 2);
         }
         WeSwipeHelper.Callback callback = mSwipeHelper.getCallback();
         if (callback instanceof WeSwipeCallback) {
@@ -162,13 +222,19 @@ public class WeSwipe {
         WeSwipeCallback mCallback = new WeSwipeCallback();
         mSwipeHelper = new WeSwipeHelper(mCallback);
         mSwipeHelper.attachToRecyclerView(rec);
+        RecyclerView.Adapter adapter = rec.getAdapter();
+        if (null != adapter) {
+
+            mHaveAdapter = true;
+            mPrivateFlag |= FLAG_MASK << REGISTER_OBSERVER;
+        }
         mPrivateFlag |= FLAG_MASK << 1;
         return this;
     }
 
     private boolean haveInit() {
         if ((mPrivateFlag & (FLAG_MASK << 1)) == 0) {
-            throw new NullPointerException("WeSwipe : An unexpected error occurred in the init process !");
+            return false;
         }
         if (null == mSwipeHelper) {
             return false;

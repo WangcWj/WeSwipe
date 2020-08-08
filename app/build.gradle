@@ -28,7 +28,8 @@ dependencies {
     implementation 'com.android.support:recyclerview-v7:26.1.0'
     implementation 'com.scwang.smartrefresh:SmartRefreshLayout:1.1.0-alpha-20'
     //Swipe
-    implementation 'com.github.WangcWj:WeSwipe:1.0.1'
+//    implementation 'com.github.WangcWj:WeSwipe:1.0.1'
+    implementation project(':helper')
     //Network
     implementation 'cn.wang.we:network:1.0.0'
 }

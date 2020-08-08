@@ -14,12 +14,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import cn.we.swipe.helper.WeSwipeHelper;
+import cn.we.swipe.helper.WeSwipeProxyAdapter;
 
 /**
  * Created by WANG on 18/4/24.
  */
 
-public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
+public class RecAdapter extends WeSwipeProxyAdapter<RecAdapter.RecViewholder> {
 
 
     private Context context;
@@ -39,7 +40,7 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     public void setList(List<String> list) {
         data.clear();
         data.addAll(list);
-        notifyItemMoved(0, data.size() - 1);
+        proxyNotifyDataSetChanged();
     }
 
     public List<String> getData() {
@@ -49,7 +50,7 @@ public class RecAdapter extends RecyclerView.Adapter<RecAdapter.RecViewholder> {
     public void removeDataByPosition(int position) {
         if (position >= 0 && position < data.size()) {
             data.remove(position);
-            notifyItemRemoved(position);
+            proxyNotifyItemRemoved(position);
         }
     }
 

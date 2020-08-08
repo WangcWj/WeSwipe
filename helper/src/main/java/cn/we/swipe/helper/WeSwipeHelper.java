@@ -341,7 +341,8 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
                     }
                 }
             } else if (action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_UP) {
-                if (mClick) {
+                //
+                if (mClick && null != mPreOpened && mSwipeType == SWIPE_ITEM_TYPE_FLOWING) {
                     doChildClickEvent(event.getRawX(), event.getRawY());
                 }
                 mActivePointerId = ACTIVE_POINTER_ID_NONE;
@@ -357,6 +358,7 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
                 mVelocityTracker.addMovement(event);
             }
 
+            Log.e("WANG", "WeSwipeHelper.onInterceptTouchEvent" + mSelected);
             return mSelected != null;
         }
 
@@ -401,7 +403,8 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
                     // fall through
                 case MotionEvent.ACTION_UP:
                     if (mClick) {
-                        doChildClickEvent(event.getRawX(), event.getRawY());
+                        // doChildClickEvent(event.getRawX(), event.getRawY());
+                        //you can do something
                     }
                     boolean needRecovery = false;
                     int swiped = swipeIfNecessary(viewHolder);
@@ -483,7 +486,7 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
         return mCallback;
     }
 
-    public boolean swipeEnable(){
+    public boolean swipeEnable() {
         return mCallback.isItemViewSwipeEnabled();
     }
 
@@ -552,6 +555,7 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
             consumeEventView = findConsumeView((ViewGroup) consumeEventView, x, y);
         }
         if (consumeEventView != null) {
+            Log.e("WANG", "WeSwipeHelper.doChildClickEvent");
             consumeEventView.performClick();
             mClick = false;
             recoveryOpenedPreItem(viewHolder);
@@ -710,12 +714,27 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
         return ((SwipeLayoutTypeCallBack) viewHolder).onScreenView();
     }
 
+    public void recoverPre(RecoverCallback callback, long duration) {
+        if (null != mPreOpened) {
+            Log.e("WANG", "WeSwipeHelper.recoverPre" + mPreOpened.getAdapterPosition() + "    " + mPreOpened.getLayoutPosition() + "    " + mPreOpened.getOldPosition());
+            recoveryOpenedPreItem(mPreOpened, duration, callback);
+        }
+    }
+
+    public boolean haveRecoverItem() {
+        return mPreOpened != null;
+    }
+
+    private void recoveryOpenedPreItem(RecyclerView.ViewHolder viewHolder) {
+        recoveryOpenedPreItem(viewHolder, -1, null);
+    }
+
     /**
      * 关闭一个打开的Item
      *
      * @param viewHolder 要关闭的Item的ViewHolder
      */
-    private void recoveryOpenedPreItem(RecyclerView.ViewHolder viewHolder) {
+    private void recoveryOpenedPreItem(RecyclerView.ViewHolder viewHolder, long duration, final RecoverCallback callback) {
         if (viewHolder == null) {
             return;
         }
@@ -726,7 +745,7 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
         float translationX = view.getTranslationX();
         ObjectAnimator objectAnimator = ObjectAnimator.ofFloat(view, "translationX", translationX, 0f);
         objectAnimator.clone();
-        objectAnimator.setDuration(mCallback.getRecoveryAnimationDuration());
+        objectAnimator.setDuration(-1 == duration ? mCallback.getRecoveryAnimationDuration() : duration);
         objectAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationStart(Animator animation) {
@@ -736,13 +755,16 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
                 if (mPendingCleanup.remove(mPreOpened)) {
                     mCallback.clearView(mRecyclerView, mPreOpened);
                 }
-                mPreOpened = null;
             }
 
             @Override
             public void onAnimationEnd(Animator animation) {
                 super.onAnimationEnd(animation);
+                mPreOpened = null;
                 mCloseAnimaIsFinish = true;
+                if (null != callback) {
+                    callback.recoverEnd();
+                }
             }
         });
         objectAnimator.start();
@@ -830,6 +852,7 @@ public class WeSwipeHelper extends RecyclerView.ItemDecoration
                         } else {
                             //successful sliding.
                             mPreOpened = prevSelected;
+                            Log.e("WANG", "WeSwipeHelper.select" + mPreOpened.getAdapterPosition());
                             // wait until remove animation is complete.
                             mPendingCleanup.add(prevSelected.itemView);
                             mIsPendingCleanup = true;

@@ -2,14 +2,17 @@ package cn.example.wang.slideslipedemo;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import cn.we.swipe.helper.RecoverCallback;
 import cn.we.swipe.helper.WeSwipe;
 
 
@@ -43,8 +46,16 @@ public class SlideOtherTypeActivity extends AppCompatActivity implements RecAdap
         recAdapter = new RecOtherTypeAdapter(this);
         recAdapter.setDeletedItemListener(this);
         recyclerView.setAdapter(recAdapter);
-        //设置WeSwipe。
-        WeSwipe.attach(recyclerView);
+
+        WeSwipe attach = WeSwipe.attach(recyclerView);
+        recAdapter.setWeSwipe(attach);
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                recAdapter.proxyNotifyDataSetChanged();
+            }
+        },5000);
     }
 
     @Override

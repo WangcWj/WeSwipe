@@ -2,6 +2,7 @@ package cn.example.wang.slideslipedemo;
 
 import android.content.Context;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,14 +12,15 @@ import android.widget.Toast;
 import java.util.ArrayList;
 import java.util.List;
 
+import cn.we.swipe.helper.WeSwipe;
 import cn.we.swipe.helper.WeSwipeHelper;
+import cn.we.swipe.helper.WeSwipeProxyAdapter;
 
 /**
  * Created by WANG on 18/4/24.
  */
 
-public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapter.RecViewHolder> {
-
+public class RecOtherTypeAdapter extends WeSwipeProxyAdapter<RecOtherTypeAdapter.RecViewHolder> {
 
     private Context context;
     private List<String> data = new ArrayList<>();
@@ -39,14 +41,14 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
             data.clear();
         }
         data.addAll(list);
-        notifyDataSetChanged();
+        proxyNotifyDataSetChanged();
     }
 
     public void removeDataByPosition(int position) {
         if (position >= 0 && position < data.size()) {
             data.remove(position);
-            notifyItemRemoved(position);
-            notifyItemRangeChanged(position, data.size() - 1);
+            proxyNotifyItemRemoved(position);
+            proxyNotifyDataSetChanged();
         }
     }
 
@@ -59,16 +61,19 @@ public class RecOtherTypeAdapter extends RecyclerView.Adapter<RecOtherTypeAdapte
     @Override
     public void onBindViewHolder(final RecViewHolder holder, final int position) {
         String s = data.get(holder.getAdapterPosition());
+        Log.e("WANG","RecOtherTypeAdapter.onBindViewHolder");
         holder.textView.setText(s);
         holder.textView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("WANG","RecOtherTypeAdapter.onClick");
                 Toast.makeText(context, "s  " + holder.getAdapterPosition(), Toast.LENGTH_SHORT).show();
             }
         });
         holder.slide.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("WANG","RecOtherTypeAdapter.onClick Deleted");
                 if (null != deletedItemListener) {
                     deletedItemListener.deleted(holder.getAdapterPosition());
                 }

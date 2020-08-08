@@ -38,6 +38,8 @@ public class MainActivity extends AppCompatActivity implements RecAdapter.Delete
         setContentView(R.layout.activity_main);
         initView();
         initData();
+
+
     }
 
     private void initData() {
@@ -55,7 +57,8 @@ public class MainActivity extends AppCompatActivity implements RecAdapter.Delete
         recAdapter.setDelectedItemListener(this);
         recyclerView.setAdapter(recAdapter);
         //设置WeSwipe。
-        WeSwipe.attach(recyclerView).setType(WeSwipeHelper.SWIPE_ITEM_TYPE_FLOWING);
+        WeSwipe weSwipe = WeSwipe.attach(recyclerView).setType(WeSwipeHelper.SWIPE_ITEM_TYPE_FLOWING);
+        recAdapter.setWeSwipe(weSwipe);
     }
 
     @Override
