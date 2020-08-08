@@ -32,8 +32,6 @@ public class WeSwipe {
     private WeSwipe() {
     }
 
-    private static final int REGISTER_OBSERVER = 4;
-
     private final String TAG = "WeSwipe";
 
     private final int FLAG_MASK = 0x1;
@@ -48,8 +46,6 @@ public class WeSwipe {
      * 帮助类
      */
     private WeSwipeHelper mSwipeHelper;
-
-    private boolean mHaveAdapter;
 
     public void recoverAll(RecoverCallback callback){
         if(!haveInit()){
@@ -87,34 +83,6 @@ public class WeSwipe {
 
     public boolean isDebug() {
         return (mPrivateFlag & FLAG_MASK << 3) != 0;
-    }
-
-    public WeSwipe setAutoRecoverWhenAdapterNotify(RecyclerView.Adapter adapter, boolean autoRecover) {
-        if (null == adapter) {
-            throw new NullPointerException("WeSwipe#setAutoRecoverWhenAdapterNotify adapter is NULL !");
-        }
-        mHaveAdapter = true;
-
-        setAutoRecoverWhenAdapterNotify(autoRecover);
-        return this;
-    }
-
-    public WeSwipe setAutoRecoverWhenAdapterNotify(boolean autoRecover) {
-        if (!mHaveAdapter) {
-            throw new NullPointerException("WeSwipe#setAutoRecoverWhenAdapterNotify adapter is NULL !");
-        }
-        if (haveRegisterAdapterObserver()) {
-            if (!autoRecover) {
-                mPrivateFlag &= ~(FLAG_MASK << REGISTER_OBSERVER);
-            }
-        } else {
-            mPrivateFlag |= FLAG_MASK << REGISTER_OBSERVER;
-        }
-        return this;
-    }
-
-    public boolean haveRegisterAdapterObserver() {
-        return (mPrivateFlag & (FLAG_MASK << REGISTER_OBSERVER)) != 0;
     }
 
     /**
@@ -222,12 +190,6 @@ public class WeSwipe {
         WeSwipeCallback mCallback = new WeSwipeCallback();
         mSwipeHelper = new WeSwipeHelper(mCallback);
         mSwipeHelper.attachToRecyclerView(rec);
-        RecyclerView.Adapter adapter = rec.getAdapter();
-        if (null != adapter) {
-
-            mHaveAdapter = true;
-            mPrivateFlag |= FLAG_MASK << REGISTER_OBSERVER;
-        }
         mPrivateFlag |= FLAG_MASK << 1;
         return this;
     }
