@@ -21,41 +21,14 @@ type = SWIPE_ITEM_TYPE_DEFAULT //表示侧滑菜单是在ItemView的下面。
 
 为了能够及时的发现并更正该库所存在的问题，现邀请大家加入该微信群中，三人行必有我师，Android技术是无止境的。另外还有妹纸开发哦~：
 
-### 先加入QQ群 `684891631` 再转微信群~
+### 先加入`QQ`群 `684891631` 再转微信群~
 
 #### 使用：[![](https://jitpack.io/v/WangcWj/WeSwipe.svg)](https://jitpack.io/#WangcWj/WeSwipe)
 
 **V 1.0.2 ：**
 
 *  修复了侧滑菜单栏两次点击的问题。
-
-* 修复了`RecyclerView`的`notify`系列方法导致的`Item`侧滑错乱等问题。监听`notify`系列方法，如果存在已经打开的侧滑布局的`Item`就先关闭`Item`再执行相关`notify`操作，功能开关如下：
-
-  第一步：你使用的Adapter要继承`WeSwipeProxyAdapter`。
-
-  ```java
-  public class RecOtherTypeAdapter extends WeSwipeProxyAdapter<> {
-  ```
-
-  第二步：使用方法调用`proxyNotify...`。
-
-  ```java
-  public void setList(List<String> list, boolean refresh) {
-          if (refresh) {
-              data.clear();
-          }
-          data.addAll(list);
-          proxyNotifyDataSetChanged();
-   }
-  
-   public void removeDataByPosition(int position) {
-          if (position >= 0 && position < data.size()) {
-              data.remove(position);
-              proxyNotifyItemRemoved(position);
-              proxyNotifyDataSetChanged();
-          }
-     }
-  ```
+*  修复了`RecyclerView`的`notify`系列方法导致的`Item`侧滑错乱等问题。
 
 **V 1.0.1 ：**
 
@@ -63,30 +36,27 @@ type = SWIPE_ITEM_TYPE_DEFAULT //表示侧滑菜单是在ItemView的下面。
 
 **敬请期待：**`v 1.0.2 `中将加入侧滑状态的获取；以及侧滑开始、侧滑打开、侧滑关闭各阶段的回调；支持每个`ViewHolder`自己选择是否支持侧滑，并不仅限于设置整个`RecyclerView`。
 
-**一 ：**
+#### 引入项目：
 
-项目的根`build.gradle`文件中加入：
+##### 一 项目的根`build.gradle`文件中加入：
 
 ```groovy
 allprojects {
-		repositories {
-			...
-			maven { url 'https://jitpack.io' }
-		}
+	repositories {
+	    maven { url 'https://jitpack.io' }
+	}
 }
 ```
 
-**二 ：**
-
-那个`Module`中要使用`WeSwipe`，就在那个`Module`的`build.gradle`文件中加入：
+##### 二 `Module & APP`的`build.gradle`文件中加入：
 
 ```groovy
 dependencies {
-	        implementation 'com.github.WangcWj:WeSwipe:version'
+    implementation 'com.github.WangcWj:WeSwipe:version'
 }
 ```
 
-**三 ：**
+##### 三  设置滑动布局（可参考项目 demo）：
 
 确保引入成功之后，在需要侧滑菜单的`RecyclerView`的`ViewHolder`中实现`SwipeLayoutTypeCallBack`接口，并实现特定的方法。这里就要区分滑动菜单的类型，如果类型是`SWIPE_ITEM_TYPE_DEFAULT`，也是默认的类型，你需要做的就是：
 
@@ -133,7 +103,7 @@ implements WeSwipeHelper.SwipeLayoutTypeCallBack {
 
 以上只是对侧滑类型为`SWIPE_ITEM_TYPE_DEFAULT`的解释。对于类型为`SWIPE_ITEM_TYPE_FLOWING`的就需要自行理解了，或者查看`Demo`。
 
-**四 关联RecyclerView：**
+##### 四 关联`RecyclerView`：
 
 ```java
 //设置WeSwipe。
@@ -142,7 +112,27 @@ WeSwipe.attach(recyclerView);
 
 支持设置侧滑类型、侧滑恢复动画的执行事件、是否支持侧滑（限于`RecyclerView`）、是否打开`Debug`。
 
-**最后在强调一下`SwipeLayoutTypeCallBack`接口中的三个方法：**
+##### 五 使用`RecyclerView.Adapter`：
+
+如果`RecyclerView`列表中存在已经打开了侧滑菜单的`Item`时，调用`notifyDataSetChange（）`方法之后，会导致侧滑菜单异常，不可恢复、位置错乱等问题。为了避免该种现象的发生，提供了一下解决方法：
+
+- 监听`notify`系列方法，如果存在已经打开的侧滑布局的`Item`就先关闭`Item`再执行相关`notify`操作，功能开关如下：
+
+  第一步：你使用的Adapter要继承`WeSwipeProxyAdapter`。
+
+  ```java
+  public class RecOtherTypeAdapter extends WeSwipeProxyAdapter<> {
+  ```
+
+  第二步：使用方法调用`proxyNotify...`。
+
+  ```java
+  proxyNotifyDataSetChanged();
+  proxyNotifyItemRemoved(position);
+  ...
+  ```
+
+**强调一下`SwipeLayoutTypeCallBack`接口中的三个方法：**
 
 * `getSwipeWidth()`
 
@@ -162,7 +152,7 @@ WeSwipe.attach(recyclerView);
 
 * 采用`notifyItemRemoved(position)+ notifyItemRangeChanged(position,data.size()-1)`方法，`position`采用`holder.getAdapterPosition()`。
 
-**可能出现的问题：**
+#### 可能出现的问题：
 
 * 当只使用`notifyItemRemoved(position)`刷新时会出现该`position`之后的`item`的位置未刷新，导致删除位置错乱。
 
